@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Muneer Hardware — Smart QR Ordering & Counter Management Demo</title>
+<title>Muneer Hardware & Enterprises — Smart Ordering</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <style>
 :root {
   --bg: #f8fafc;
   --bg-card: #ffffff;
-  --bg-elevated: #ffffff;
   --border: #e2e8f0;
   --border-strong: #cbd5e1;
   --text: #0f172a;
@@ -23,8 +23,6 @@
   --primary-hover: #0d9488;
   --primary-light: #ccfbf1;
   --primary-dark: #134e4a;
-  --accent: #ea580c;
-  --accent-light: #ffedd5;
   --success: #059669;
   --success-light: #d1fae5;
   --warning: #d97706;
@@ -33,7 +31,6 @@
   --danger-light: #fee2e2;
   --info: #2563eb;
   --info-light: #dbeafe;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -42,7 +39,6 @@
   --radius-lg: 16px;
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
 body {
@@ -53,1402 +49,648 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
 }
-
-/* Demo Mode Switcher */
-.demo-bar {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background: #0f172a;
-  color: #fff;
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 13px;
-  box-shadow: var(--shadow-md);
-}
-.demo-bar .label {
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  opacity: 0.7;
-  font-size: 11px;
-}
-.demo-tabs {
-  display: flex;
-  gap: 4px;
-  background: rgba(255,255,255,0.08);
-  padding: 3px;
-  border-radius: 8px;
-}
-.demo-tab {
-  padding: 6px 14px;
-  border: none;
-  background: transparent;
-  color: rgba(255,255,255,0.7);
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: var(--transition);
-  font-family: inherit;
-}
-.demo-tab:hover { color: #fff; background: rgba(255,255,255,0.1); }
-.demo-tab.active {
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
-.demo-info {
-  font-size: 11px;
-  opacity: 0.6;
-  display: none;
-}
-@media (min-width: 768px) { .demo-info { display: block; } }
-
-/* Views */
-.view { display: none; min-height: calc(100vh - 48px); }
+.view { display: none; min-height: 100vh; }
 .view.active { display: block; }
+.hidden { display: none !important; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 20px; border: none; border-radius: var(--radius-sm);
+  font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+  transition: var(--transition); text-decoration: none;
+}
+.btn-primary { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(15,118,110,0.3); }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: #fff; color: var(--text); border: 1.5px solid var(--border); }
+.btn-secondary:hover { background: var(--bg); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-sm { padding: 8px 14px; font-size: 13px; }
+.btn-full { width: 100%; padding: 14px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+.form-group input, .form-group select {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 15px; font-family: inherit; background: #fff;
+}
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,118,110,0.12); }
+.form-group input.error { border-color: var(--danger); }
+.status-badge {
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.status-badge.waiting { background: var(--info-light); color: #1e40af; }
+.status-badge.assigned, .status-badge.preparing { background: var(--warning-light); color: #92400e; }
+.status-badge.ready { background: var(--success-light); color: #065f46; }
+.status-badge.billing { background: #e0e7ff; color: #3730a3; }
+.status-badge.completed { background: #f1f5f9; color: #64748b; }
+.toast-container { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; max-width: 360px; }
+.toast {
+  background: #0f172a; color: #fff; padding: 12px 16px; border-radius: var(--radius-sm);
+  font-size: 13px; box-shadow: var(--shadow-lg); display: flex; align-items: flex-start; gap: 10px;
+  animation: slideIn 0.3s ease; border-left: 4px solid var(--primary);
+}
+.toast.success { border-left-color: var(--success); }
+.toast.warning { border-left-color: var(--warning); }
+.toast.info { border-left-color: var(--info); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.toast-close { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 16px; margin-left: auto; }
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,0.55); z-index: 300;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  opacity: 0; visibility: hidden; transition: var(--transition);
+}
+.modal-overlay.open { opacity: 1; visibility: visible; }
+.modal {
+  background: var(--bg-card); border-radius: var(--radius-lg); width: 100%; max-width: 720px;
+  max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+  transform: scale(0.95); transition: transform 0.2s ease;
+}
+.modal-overlay.open .modal { transform: scale(1); }
+.modal-header {
+  padding: 18px 24px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0; background: var(--bg-card); z-index: 1;
+}
+.modal-header h2 { font-size: 17px; font-weight: 600; }
+.modal-body { padding: 24px; }
+.modal-footer {
+  padding: 16px 24px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+  position: sticky; bottom: 0; background: var(--bg-card);
+}
+.sheet-close {
+  width: 32px; height: 32px; border: none; background: var(--bg); border-radius: 50%;
+  cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
+}
 
-/* ========== CUSTOMER VIEW ========== */
-.customer-view { max-width: 480px; margin: 0 auto; background: var(--bg); min-height: calc(100vh - 48px); position: relative; }
+/* LOGIN */
+.login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: linear-gradient(180deg, #f0fdfa 0%, #f8fafc 50%);
+}
+.login-card {
+  background: var(--bg-card); border-radius: var(--radius-lg); padding: 32px 28px;
+  box-shadow: var(--shadow-lg); border: 1px solid var(--border); width: 100%; max-width: 400px;
+}
+.login-logo {
+  width: 56px; height: 56px; background: var(--primary); border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+  color: #fff; font-weight: 700; font-size: 18px;
+}
+.login-card h1 { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+.login-card .sub { text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 24px; }
+.role-tabs { display: flex; gap: 4px; background: var(--bg); padding: 3px; border-radius: 8px; margin-bottom: 20px; }
+.role-tab {
+  flex: 1; padding: 8px; border: none; background: transparent; font-size: 13px; font-weight: 500;
+  color: var(--text-secondary); border-radius: 6px; cursor: pointer; font-family: inherit;
+}
+.role-tab.active { background: #fff; color: var(--primary); box-shadow: var(--shadow); font-weight: 600; }
+.demo-creds {
+  margin-top: 20px; padding: 12px; background: var(--bg); border-radius: var(--radius-sm);
+  font-size: 11px; color: var(--text-muted); line-height: 1.6;
+}
+.demo-creds strong { color: var(--text-secondary); }
 
-/* Welcome Screen */
+/* CUSTOMER */
+.customer-view { max-width: 480px; margin: 0 auto; background: var(--bg); min-height: 100vh; position: relative; }
 .welcome-screen {
-  min-height: calc(100vh - 48px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 32px 24px;
-  background: linear-gradient(180deg, #f0fdfa 0%, #f8fafc 40%);
+  min-height: 100vh; display: flex; flex-direction: column; justify-content: center;
+  padding: 32px 24px; background: linear-gradient(180deg, #f0fdfa 0%, #f8fafc 40%);
 }
 .welcome-logo {
-  width: 72px;
-  height: 72px;
-  background: var(--primary);
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 24px;
-  box-shadow: 0 8px 24px rgba(15,118,110,0.25);
+  width: 72px; height: 72px; background: var(--primary); border-radius: 18px;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;
+  box-shadow: 0 8px 24px rgba(15,118,110,0.25); color: #fff; font-weight: 700; font-size: 22px;
 }
-.welcome-logo svg { width: 36px; height: 36px; fill: #fff; }
-.welcome-title {
-  font-size: 22px;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: -0.02em;
-  margin-bottom: 6px;
-}
-.welcome-tagline {
-  text-align: center;
-  color: var(--primary);
-  font-weight: 500;
-  font-size: 14px;
-  margin-bottom: 32px;
-}
+.welcome-title { font-size: 20px; font-weight: 700; text-align: center; letter-spacing: -0.02em; margin-bottom: 6px; }
+.welcome-tagline { text-align: center; color: var(--primary); font-weight: 500; font-size: 14px; margin-bottom: 28px; }
 .welcome-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  padding: 28px 24px;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border);
+  background: var(--bg-card); border-radius: var(--radius-lg); padding: 28px 24px;
+  box-shadow: var(--shadow-lg); border: 1px solid var(--border);
 }
-.welcome-card h2 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: var(--text);
-}
-.form-group { margin-bottom: 16px; }
-.form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-}
-.form-group input {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 15px;
-  font-family: inherit;
-  transition: var(--transition);
-  background: #fff;
-}
-.form-group input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(15,118,110,0.12);
-}
-.form-group input.error { border-color: var(--danger); }
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 15px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: var(--transition);
-  text-decoration: none;
-}
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-  width: 100%;
-  padding: 14px;
-  box-shadow: 0 2px 8px rgba(15,118,110,0.3);
-}
-.btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
-.btn-primary:active { transform: translateY(0); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-secondary {
-  background: #fff;
-  color: var(--text);
-  border: 1.5px solid var(--border);
-}
-.btn-secondary:hover { background: var(--bg); border-color: var(--border-strong); }
-.btn-sm { padding: 8px 14px; font-size: 13px; }
-.btn-ghost { background: transparent; color: var(--primary); border: none; padding: 8px 12px; }
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-success { background: var(--success); color: #fff; }
-
-/* Customer Header */
+.welcome-card h2 { font-size: 16px; font-weight: 600; margin-bottom: 20px; }
 .cust-header {
-  background: var(--bg-card);
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 48px;
-  z-index: 50;
+  background: var(--bg-card); padding: 16px 20px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
 }
-.cust-header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.cust-greeting {
-  font-size: 15px;
-  font-weight: 600;
-}
+.cust-greeting { font-size: 15px; font-weight: 600; }
 .cust-greeting span { color: var(--primary); }
-.cust-order-badge {
-  font-size: 11px;
-  background: var(--primary-light);
-  color: var(--primary-dark);
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-weight: 600;
-}
-.search-wrap {
-  position: relative;
-}
+.search-wrap { position: relative; margin-top: 12px; }
 .search-wrap input {
-  width: 100%;
-  padding: 11px 14px 11px 40px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-family: inherit;
-  background: var(--bg);
+  width: 100%; padding: 11px 14px 11px 40px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; background: var(--bg);
 }
-.search-wrap input:focus {
-  outline: none;
-  border-color: var(--primary);
-  background: #fff;
-}
-.search-wrap svg {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: var(--text-muted);
-}
-
-/* Categories */
+.search-wrap input:focus { outline: none; border-color: var(--primary); background: #fff; }
+.search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted); }
 .categories {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
+  display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; background: var(--bg-card); border-bottom: 1px solid var(--border);
 }
 .categories::-webkit-scrollbar { display: none; }
 .cat-chip {
-  flex-shrink: 0;
-  padding: 7px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1.5px solid var(--border);
-  background: #fff;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
+  flex-shrink: 0; padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  border: 1.5px solid var(--border); background: #fff; color: var(--text-secondary); cursor: pointer; white-space: nowrap;
 }
-.cat-chip:hover { border-color: var(--primary); color: var(--primary); }
-.cat-chip.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-}
-
-/* Products */
-.products-grid {
-  padding: 16px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding-bottom: 100px;
-}
+.cat-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.products-grid { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 100px; }
 .product-card {
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  transition: var(--transition);
-  display: flex;
-  flex-direction: column;
+  background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border);
+  overflow: hidden; display: flex; flex-direction: column; transition: var(--transition);
 }
-.product-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+.product-card:hover { box-shadow: var(--shadow-md); }
 .product-img {
-  height: 90px;
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  position: relative;
+  height: 110px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
 }
-.product-img .placeholder {
-  width: 48px;
-  height: 48px;
-  background: rgba(15,118,110,0.1);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary);
-  font-weight: 700;
-  font-size: 14px;
+.product-img img { width: 100%; height: 100%; object-fit: cover; }
+.product-img .fallback {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0); color: var(--primary); font-weight: 700; font-size: 13px;
 }
 .product-body { padding: 12px; flex: 1; display: flex; flex-direction: column; }
-.product-name {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.3;
-  margin-bottom: 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.product-desc {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.product-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-}
-.product-price {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-.product-price small {
-  display: block;
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--text-muted);
-}
-.product-unit {
-  font-size: 11px;
-  color: var(--text-muted);
-}
+.product-name { font-size: 13px; font-weight: 600; line-height: 1.3; margin-bottom: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-spec { font-size: 11px; color: var(--primary); font-weight: 500; margin-bottom: 4px; }
+.product-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.product-meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+.product-unit { font-size: 11px; color: var(--text-muted); }
 .add-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: var(--primary);
-  color: #fff;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--transition);
+  width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--primary); color: #fff;
+  font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-.add-btn:hover { background: var(--primary-hover); }
-.qty-control {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--primary-light);
-  border-radius: 8px;
-  padding: 2px;
-}
+.qty-control { display: flex; align-items: center; gap: 6px; background: var(--primary-light); border-radius: 8px; padding: 2px; }
 .qty-control button {
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: var(--primary);
-  color: #fff;
-  border-radius: 6px;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 28px; height: 28px; border: none; background: var(--primary); color: #fff; border-radius: 6px;
+  font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-.qty-control span {
-  font-size: 13px;
-  font-weight: 600;
-  min-width: 20px;
-  text-align: center;
-  color: var(--primary-dark);
-}
-
-/* Sticky Cart */
+.qty-control span { font-size: 13px; font-weight: 600; min-width: 20px; text-align: center; color: var(--primary-dark); }
 .sticky-cart {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-width: 480px;
-  margin: 0 auto;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
-  z-index: 100;
-  transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto;
+  background: var(--bg-card); border-top: 1px solid var(--border); padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.08); z-index: 100;
+  transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .sticky-cart.visible { transform: translateY(0); }
 .cart-info { display: flex; flex-direction: column; }
 .cart-count { font-size: 13px; font-weight: 600; }
 .cart-sub { font-size: 11px; color: var(--text-muted); }
-.cart-btn {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  padding: 12px 20px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Cart Modal / Sheet */
+.cart-btn { background: var(--primary); color: #fff; border: none; padding: 12px 20px; border-radius: var(--radius-sm); font-weight: 600; font-size: 14px; cursor: pointer; }
 .sheet-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15,23,42,0.5);
-  z-index: 200;
-  opacity: 0;
-  visibility: hidden;
-  transition: var(--transition);
+  position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 200;
+  opacity: 0; visibility: hidden; transition: var(--transition);
 }
 .sheet-overlay.open { opacity: 1; visibility: visible; }
 .sheet {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-width: 480px;
-  margin: 0 auto;
-  background: var(--bg-card);
-  border-radius: 20px 20px 0 0;
-  max-height: 85vh;
-  overflow-y: auto;
-  z-index: 201;
-  transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding-bottom: env(safe-area-inset-bottom);
+  position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto;
+  background: var(--bg-card); border-radius: 20px 20px 0 0; max-height: 85vh; overflow-y: auto; z-index: 201;
+  transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .sheet.open { transform: translateY(0); }
 .sheet-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  background: var(--bg-card);
-  z-index: 1;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0; background: var(--bg-card); z-index: 1;
 }
 .sheet-header h3 { font-size: 17px; font-weight: 600; }
-.sheet-close {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: var(--bg);
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 .cart-items { padding: 12px 16px; }
-.cart-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
-  align-items: center;
-}
-.cart-item:last-child { border-bottom: none; }
+.cart-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: center; }
 .cart-item-info { flex: 1; }
 .cart-item-name { font-size: 14px; font-weight: 500; }
 .cart-item-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.cart-item-actions { display: flex; align-items: center; gap: 8px; }
-.remove-btn {
-  background: none;
-  border: none;
-  color: var(--danger);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 4px;
-}
-.cart-footer {
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  background: var(--bg);
-  position: sticky;
-  bottom: 0;
-}
+.cart-footer { padding: 16px 20px; border-top: 1px solid var(--border); background: var(--bg); position: sticky; bottom: 0; }
 .cart-note {
-  font-size: 12px;
-  color: var(--text-muted);
-  text-align: center;
-  margin-bottom: 12px;
-  padding: 8px;
-  background: var(--warning-light);
-  border-radius: var(--radius-sm);
-  color: #92400e;
+  font-size: 12px; text-align: center; margin-bottom: 12px; padding: 8px;
+  background: var(--warning-light); border-radius: var(--radius-sm); color: #92400e;
 }
-.cart-total-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-/* Order Success */
+.cart-total-row { display: flex; justify-content: space-between; margin-bottom: 16px; font-weight: 600; font-size: 16px; }
 .order-success {
-  min-height: calc(100vh - 48px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  text-align: center;
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 24px; text-align: center;
 }
 .success-icon {
-  width: 80px;
-  height: 80px;
-  background: var(--success-light);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-  animation: scaleIn 0.4s ease;
+  width: 80px; height: 80px; background: var(--success-light); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
 }
-.success-icon svg { width: 40px; height: 40px; color: var(--success); }
-@keyframes scaleIn {
-  from { transform: scale(0.5); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-.order-success h2 { font-size: 22px; margin-bottom: 8px; }
 .order-id-display {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-light);
-  padding: 8px 20px;
-  border-radius: 8px;
-  margin: 16px 0;
-  letter-spacing: 0.05em;
+  font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 600; color: var(--primary);
+  background: var(--primary-light); padding: 8px 20px; border-radius: 8px; margin: 16px 0; letter-spacing: 0.05em;
 }
-.order-success p { color: var(--text-secondary); font-size: 14px; max-width: 280px; margin: 0 auto 8px; }
 .order-ready-state {
-  background: var(--success-light);
-  border: 1px solid #a7f3d0;
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-top: 24px;
-  width: 100%;
-  max-width: 320px;
+  background: var(--success-light); border: 1px solid #a7f3d0; border-radius: var(--radius);
+  padding: 20px; margin-top: 24px; width: 100%; max-width: 320px;
 }
 .order-ready-state h3 { color: var(--success); font-size: 16px; margin-bottom: 4px; }
+.new-order-btn { margin-top: 24px; }
+.refresh-status-btn { margin-top: 12px; }
 
-/* QR Section */
-.qr-section {
-  margin: 20px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  text-align: center;
+/* COUNTER / ADMIN SHARED */
+.dash-header {
+  background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; flex-wrap: wrap; gap: 10px;
 }
-.qr-placeholder {
-  width: 140px;
-  height: 140px;
-  margin: 0 auto 16px;
-  background: #fff;
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
+.dash-brand { display: flex; align-items: center; gap: 12px; }
+.dash-brand .logo {
+  width: 36px; height: 36px; background: var(--primary); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px;
 }
-.qr-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  width: 100px;
-  height: 100px;
+.dash-brand h1 { font-size: 16px; font-weight: 700; }
+.dash-brand span { font-size: 12px; color: var(--text-muted); display: block; }
+.dash-nav { display: flex; gap: 4px; background: var(--bg); padding: 3px; border-radius: 8px; overflow-x: auto; }
+.dash-nav button {
+  padding: 8px 14px; border: none; background: transparent; font-size: 13px; font-weight: 500;
+  color: var(--text-secondary); border-radius: 6px; cursor: pointer; font-family: inherit; white-space: nowrap;
 }
-.qr-cell { background: #0f172a; border-radius: 1px; }
-.qr-cell.off { background: transparent; }
-.qr-section h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.qr-section p { font-size: 12px; color: var(--text-muted); }
-
-/* ========== COUNTER VIEW ========== */
-.counter-view {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 0 40px;
-}
-.counter-header {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 48px;
-  z-index: 50;
-}
-.counter-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.counter-brand .logo {
-  width: 36px;
-  height: 36px;
-  background: var(--primary);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-}
-.counter-brand h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
-.counter-brand span { font-size: 12px; color: var(--text-muted); font-weight: 400; display: block; }
-.counter-nav {
-  display: flex;
-  gap: 4px;
-  background: var(--bg);
-  padding: 3px;
-  border-radius: 8px;
-}
-.counter-nav button {
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: var(--transition);
-}
-.counter-nav button:hover { color: var(--text); }
-.counter-nav button.active {
-  background: #fff;
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
-  font-weight: 600;
-}
-.notif-bell {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: var(--bg);
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.notif-bell .badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 16px;
-  height: 16px;
-  background: var(--danger);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.counter-body { padding: 24px; }
-
-/* Stats */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
-}
+.dash-nav button.active { background: #fff; color: var(--primary); box-shadow: var(--shadow); font-weight: 600; }
+.dash-body { padding: 24px; max-width: 1280px; margin: 0 auto; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
 @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 .stat-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  transition: var(--transition);
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px;
 }
-.stat-card:hover { box-shadow: var(--shadow); }
 .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
 .stat-value { font-size: 28px; font-weight: 700; margin-top: 4px; letter-spacing: -0.03em; }
 .stat-card.new .stat-value { color: var(--info); }
 .stat-card.prep .stat-value { color: var(--warning); }
 .stat-card.ready .stat-value { color: var(--success); }
 .stat-card.done .stat-value { color: var(--text-secondary); }
-
-/* Orders Panel */
 .panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 24px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; margin-bottom: 24px;
 }
 .panel-header {
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
 }
 .panel-header h2 { font-size: 15px; font-weight: 600; }
 .orders-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 .order-card {
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 16px;
-  transition: var(--transition);
-  cursor: pointer;
-  background: #fff;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 16px; background: #fff;
 }
-.order-card:hover { border-color: var(--primary); box-shadow: var(--shadow); }
 .order-card.new { border-left: 4px solid var(--info); }
 .order-card.assigned { border-left: 4px solid var(--warning); }
 .order-card.ready { border-left: 4px solid var(--success); }
-.order-card.completed { border-left: 4px solid var(--text-muted); opacity: 0.75; }
-.order-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 10px;
-}
-.order-id {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  font-size: 15px;
-}
-.status-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.status-badge.waiting { background: var(--info-light); color: #1e40af; }
-.status-badge.assigned { background: var(--warning-light); color: #92400e; }
-.status-badge.preparing { background: var(--warning-light); color: #92400e; }
-.status-badge.ready { background: var(--success-light); color: #065f46; }
-.status-badge.completed { background: #f1f5f9; color: #64748b; }
-.order-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
-}
+.order-card.completed { border-left: 4px solid var(--text-muted); opacity: 0.8; }
+.order-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.order-id { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 15px; }
+.order-meta { display: flex; flex-wrap: wrap; gap: 12px 20px; font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
 .order-meta strong { color: var(--text); font-weight: 500; }
 .order-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* Staff Table */
-.staff-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
+.staff-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .staff-table th {
-  text-align: left;
-  padding: 12px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); background: var(--bg);
 }
-.staff-table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-.staff-table tr:last-child td { border-bottom: none; }
-.staff-table tr:hover td { background: #f8fafc; }
-.status-dot {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-}
-.status-dot::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
+.staff-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.status-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
+.status-dot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; }
 .status-dot.available::before { background: var(--success); }
 .status-dot.busy::before { background: var(--warning); }
 .status-dot.offline::before { background: var(--text-muted); }
+.logout-btn { font-size: 12px; color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 6px 10px; }
+.logout-btn:hover { color: var(--danger); }
 
-/* Billing Modal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15,23,42,0.55);
-  z-index: 300;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  opacity: 0;
-  visibility: hidden;
-  transition: var(--transition);
-}
-.modal-overlay.open { opacity: 1; visibility: visible; }
-.modal {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 720px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-  transform: scale(0.95);
-  transition: transform 0.2s ease;
-}
-.modal-overlay.open .modal { transform: scale(1); }
-.modal-header {
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  background: var(--bg-card);
-  z-index: 1;
-}
-.modal-header h2 { font-size: 17px; font-weight: 600; }
-.modal-body { padding: 24px; }
-.modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  position: sticky;
-  bottom: 0;
-  background: var(--bg-card);
-}
-
-/* Billing Table */
-.bill-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  margin-bottom: 20px;
-}
+/* BILLING */
+.bill-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
 .bill-table th {
-  text-align: left;
-  padding: 10px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  border-bottom: 2px solid var(--border);
-  background: var(--bg);
+  text-align: left; padding: 10px 8px; font-size: 11px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; border-bottom: 2px solid var(--border); background: var(--bg);
 }
 .bill-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .bill-table input {
-  width: 70px;
-  padding: 6px 8px;
-  border: 1.5px solid var(--border);
-  border-radius: 6px;
-  font-size: 13px;
-  font-family: inherit;
-  text-align: right;
+  width: 70px; padding: 6px 8px; border: 1.5px solid var(--border); border-radius: 6px;
+  font-size: 13px; font-family: inherit; text-align: right;
 }
-.bill-table input:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-.bill-summary {
-  background: var(--bg);
-  border-radius: var(--radius-sm);
-  padding: 16px 20px;
-  margin-top: 8px;
-}
-.bill-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  font-size: 14px;
-}
-.bill-row.total {
-  font-size: 18px;
-  font-weight: 700;
-  border-top: 2px solid var(--border);
-  margin-top: 8px;
-  padding-top: 12px;
-  color: var(--primary-dark);
-}
+.bill-summary { background: var(--bg); border-radius: var(--radius-sm); padding: 16px 20px; margin-top: 8px; }
+.bill-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+.bill-row.total { font-size: 18px; font-weight: 700; border-top: 2px solid var(--border); margin-top: 8px; padding-top: 12px; color: var(--primary-dark); }
 .gst-row { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
 .gst-row label { font-size: 13px; font-weight: 500; }
 .gst-row input { width: 60px; padding: 6px 8px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; }
-
-/* Invoice Preview */
-.invoice {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 32px;
-  font-size: 13px;
-}
-.invoice-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 28px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid var(--primary);
-}
+.invoice { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; font-size: 13px; }
+.invoice-header { display: flex; justify-content: space-between; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid var(--primary); }
 .invoice-brand h2 { font-size: 18px; font-weight: 700; color: var(--primary-dark); }
 .invoice-brand p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 .invoice-meta { text-align: right; font-size: 12px; color: var(--text-secondary); }
-.invoice-meta strong { color: var(--text); }
-.invoice-parties {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
-}
+.invoice-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
 .invoice-parties h4 { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; }
 .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-.invoice-table th {
-  background: var(--bg);
-  padding: 10px 12px;
-  text-align: left;
-  font-size: 11px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
-}
+.invoice-table th { background: var(--bg); padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 .invoice-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
 .invoice-totals { margin-left: auto; width: 240px; }
 .invoice-totals .row { display: flex; justify-content: space-between; padding: 4px 0; }
 .invoice-totals .grand { font-weight: 700; font-size: 16px; border-top: 2px solid var(--border); margin-top: 8px; padding-top: 10px; color: var(--primary-dark); }
-.invoice-footer {
-  margin-top: 32px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
+.invoice-footer { margin-top: 32px; text-align: center; font-size: 12px; color: var(--text-muted); padding-top: 16px; border-top: 1px solid var(--border); }
 
-/* ========== STAFF VIEW ========== */
-.staff-view {
-  max-width: 420px;
-  margin: 0 auto;
-  min-height: calc(100vh - 48px);
-  background: var(--bg);
-}
+/* STAFF MOBILE */
+.staff-view { max-width: 420px; margin: 0 auto; min-height: 100vh; background: var(--bg); }
 .staff-header {
-  background: var(--primary-dark);
-  color: #fff;
-  padding: 16px 20px;
-  position: sticky;
-  top: 48px;
-  z-index: 50;
-}
-.staff-header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  background: var(--primary-dark); color: #fff; padding: 16px 20px; position: sticky; top: 0; z-index: 50;
 }
 .staff-header h1 { font-size: 15px; font-weight: 600; opacity: 0.9; }
-.staff-select {
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.25);
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-}
-.staff-select option { color: #0f172a; }
-.staff-status-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
+.staff-status-bar { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-top: 10px; }
 .staff-status-pill {
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase;
 }
 .staff-status-pill.available { background: rgba(16,185,129,0.25); color: #a7f3d0; }
 .staff-status-pill.busy { background: rgba(245,158,11,0.3); color: #fde68a; }
-.staff-status-pill.offline { background: rgba(148,163,184,0.3); color: #cbd5e1; }
-
 .staff-body { padding: 16px; }
-.staff-empty {
-  text-align: center;
-  padding: 60px 24px;
-  color: var(--text-muted);
-}
-.staff-empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
+.staff-empty { text-align: center; padding: 60px 24px; color: var(--text-muted); }
 .staff-order-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 16px;
-  box-shadow: var(--shadow);
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; margin-bottom: 16px; box-shadow: var(--shadow);
 }
-.staff-order-header {
-  background: var(--primary);
-  color: #fff;
-  padding: 14px 16px;
-}
+.staff-order-header { background: var(--primary); color: #fff; padding: 14px 16px; }
 .staff-order-header .label { font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.04em; }
 .staff-order-header .id { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600; margin-top: 2px; }
-.staff-order-customer {
-  padding: 12px 16px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-.staff-items { padding: 8px 0; }
+.staff-order-customer { padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--border); font-size: 13px; }
 .staff-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: var(--transition);
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
 }
-.staff-item:last-child { border-bottom: none; }
-.staff-item:hover { background: #f8fafc; }
 .staff-item.checked { background: var(--success-light); }
-.staff-item input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--success);
-  cursor: pointer;
-  flex-shrink: 0;
+.staff-item input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--success); flex-shrink: 0; }
+.staff-item-img {
+  width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #f1f5f9; flex-shrink: 0;
 }
 .staff-item-info { flex: 1; }
 .staff-item-name { font-size: 14px; font-weight: 500; }
 .staff-item-qty { font-size: 12px; color: var(--text-muted); }
-.staff-progress {
-  padding: 12px 16px;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 500;
-}
-.progress-bar {
-  height: 6px;
-  background: var(--border);
-  border-radius: 3px;
-  overflow: hidden;
-  margin: 0 16px 12px;
-}
-.progress-fill {
-  height: 100%;
-  background: var(--success);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-.staff-submit {
-  margin: 0 16px 16px;
-  width: calc(100% - 32px);
-}
-
-/* Toasts */
-.toast-container {
-  position: fixed;
-  top: 60px;
-  right: 16px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 360px;
-}
-.toast {
-  background: #0f172a;
-  color: #fff;
-  padding: 12px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
+.progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 0 16px 12px; }
+.progress-fill { height: 100%; background: var(--success); border-radius: 3px; transition: width 0.3s ease; }
+.staff-progress { padding: 12px 16px; background: var(--bg); border-top: 1px solid var(--border); font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; }
+.staff-submit { margin: 0 16px 16px; width: calc(100% - 32px); }
+.notif-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 500; background: var(--primary); color: #fff;
+  padding: 16px 20px; text-align: center; transform: translateY(-100%); transition: transform 0.3s ease;
   box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  animation: slideIn 0.3s ease;
-  border-left: 4px solid var(--primary);
 }
-.toast.success { border-left-color: var(--success); }
-.toast.warning { border-left-color: var(--warning); }
-.toast.info { border-left-color: var(--info); }
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-.toast-close {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.6);
-  cursor: pointer;
-  font-size: 16px;
-  margin-left: auto;
-  padding: 0 4px;
-}
+.notif-banner.show { transform: translateY(0); }
+.notif-banner h3 { font-size: 16px; margin-bottom: 4px; }
+.notif-banner p { font-size: 13px; opacity: 0.9; }
+.notif-banner .btn { margin-top: 10px; background: #fff; color: var(--primary); }
 
-/* Empty states */
-.empty-state {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--text-muted);
+/* ADMIN */
+.analytics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.search-bar { margin-bottom: 16px; }
+.search-bar input { width: 100%; max-width: 360px; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; }
+.qr-print-section {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; text-align: center; max-width: 360px;
 }
-.empty-state p { font-size: 14px; margin-top: 8px; }
+.qr-print-section canvas, .qr-print-section img { margin: 0 auto 16px; display: block; }
+.qr-print-section h3 { font-size: 15px; margin-bottom: 4px; }
+.qr-print-section p { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
 
-/* Utility */
-.hidden { display: none !important; }
-.text-muted { color: var(--text-muted); }
-.mt-2 { margin-top: 8px; }
-.mt-4 { margin-top: 16px; }
-.flex { display: flex; }
-.gap-2 { gap: 8px; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-
-/* Responsive adjustments */
 @media (max-width: 640px) {
-  .counter-header { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
-  .counter-nav { order: 3; width: 100%; overflow-x: auto; }
-  .counter-body { padding: 16px; }
+  .dash-header { padding: 12px 16px; }
+  .dash-body { padding: 16px; }
   .stats-grid { gap: 10px; }
   .stat-value { font-size: 22px; }
-  .modal { max-height: 95vh; }
   .invoice { padding: 20px; }
   .invoice-parties { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
-
-<!-- DEMO MODE BAR -->
-<div class="demo-bar">
-  <div class="label">Demo Mode</div>
-  <div class="demo-tabs">
-    <button class="demo-tab active" data-view="customer">Customer</button>
-    <button class="demo-tab" data-view="counter">Counter</button>
-    <button class="demo-tab" data-view="staff">Staff</button>
-  </div>
-  <div class="demo-info">All views share live state • Refresh-safe via localStorage</div>
+<div class="toast-container" id="toastContainer"></div>
+<div class="notif-banner" id="staffNotifBanner">
+  <h3>🔔 New Order Assigned</h3>
+  <p id="staffNotifText"></p>
+  <button class="btn btn-sm" id="staffNotifViewBtn">View Order</button>
 </div>
 
-<!-- TOAST CONTAINER -->
-<div class="toast-container" id="toastContainer"></div>
+<!-- ==================== LOGIN VIEW ==================== -->
+<div class="view" id="view-login">
+  <div class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">MH</div>
+      <h1>Muneer Hardware</h1>
+      <p class="sub">Internal Access</p>
+      <div class="role-tabs">
+        <button class="role-tab active" data-role="counter">Counter</button>
+        <button class="role-tab" data-role="staff">Staff</button>
+        <button class="role-tab" data-role="admin">Admin</button>
+      </div>
+      <div id="loginForm">
+        <div class="form-group" id="staffSelectGroup" style="display:none;">
+          <label>Select Staff</label>
+          <select id="loginStaffSelect"></select>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="loginUsername" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-full" id="btnLogin">Sign In</button>
+      </div>
+      <div class="demo-creds" id="demoCreds">
+        <strong>Demo Credentials</strong><br>
+        Counter: counter / counter123<br>
+        Admin: admin / admin123<br>
+        Staff: select name → password is staff123
+      </div>
+      <p style="text-align:center;margin-top:16px;font-size:12px;">
+        <a href="#customer" id="linkCustomer" style="color:var(--primary);">Customer Ordering →</a>
+      </p>
+    </div>
+  </div>
+</div>
 
 <!-- ==================== CUSTOMER VIEW ==================== -->
-<div class="view customer-view active" id="view-customer">
-
-  <!-- Welcome Screen -->
-  <div class="welcome-screen" id="welcomeScreen">
-    <div class="welcome-logo">
-      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-    </div>
-    <h1 class="welcome-title">MUNEER HARDWARE & ENTERPRISES</h1>
-    <p class="welcome-tagline">Smart Ordering. Faster Service.</p>
-    <div class="welcome-card">
-      <h2>Welcome. Enter your details to start your order.</h2>
-      <div class="form-group">
-        <label for="custName">Full Name *</label>
-        <input type="text" id="custName" placeholder="e.g. Aboobakker" autocomplete="name">
+<div class="view" id="view-customer">
+  <div class="customer-view">
+    <div class="welcome-screen" id="welcomeScreen">
+      <div class="welcome-logo">MH</div>
+      <h1 class="welcome-title">MUNEER HARDWARE & ENTERPRISES</h1>
+      <p class="welcome-tagline">Smart Ordering. Faster Service.</p>
+      <div class="welcome-card">
+        <h2>Welcome. Enter your details to start your order.</h2>
+        <div class="form-group">
+          <label for="custName">Full Name *</label>
+          <input type="text" id="custName" placeholder="e.g. Aboobakker" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="custWhatsApp">WhatsApp Number *</label>
+          <input type="tel" id="custWhatsApp" placeholder="e.g. 9876543210" autocomplete="tel">
+        </div>
+        <button class="btn btn-primary btn-full" id="btnContinue">Continue to Shop</button>
       </div>
-      <div class="form-group">
-        <label for="custWhatsApp">WhatsApp Number *</label>
-        <input type="tel" id="custWhatsApp" placeholder="e.g. 9876543210" autocomplete="tel">
-      </div>
-      <button class="btn btn-primary" id="btnContinue">Continue to Shop</button>
     </div>
-    <div class="qr-section" style="margin-top:32px;">
-      <div class="qr-placeholder">
-        <div class="qr-grid" id="qrGrid"></div>
-      </div>
-      <h4>SCAN TO ORDER</h4>
-      <p>Skip the queue. Order from your phone.</p>
-    </div>
-  </div>
-
-  <!-- Shop Screen -->
-  <div id="shopScreen" class="hidden">
-    <div class="cust-header">
-      <div class="cust-header-top">
+    <div id="shopScreen" class="hidden">
+      <div class="cust-header">
         <div class="cust-greeting">Welcome, <span id="custDisplayName">Guest</span></div>
-        <div class="cust-order-badge" id="custOrderBadge" style="display:none;"></div>
+        <div class="search-wrap">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input type="text" id="searchInput" placeholder="Search hardware, tools, plumbing...">
+        </div>
       </div>
-      <div class="search-wrap">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <input type="text" id="searchInput" placeholder="Search hardware, tools, plumbing...">
+      <div class="categories" id="categoryList"></div>
+      <div class="products-grid" id="productsGrid"></div>
+    </div>
+    <div id="orderStatusScreen" class="order-success hidden">
+      <div class="success-icon">
+        <svg width="40" height="40" fill="none" stroke="#059669" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
       </div>
-    </div>
-    <div class="categories" id="categoryList"></div>
-    <div class="products-grid" id="productsGrid"></div>
-  </div>
-
-  <!-- Order Placed / Ready Screen -->
-  <div id="orderStatusScreen" class="order-success hidden">
-    <div class="success-icon">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-    </div>
-    <h2 id="orderStatusTitle">Order Received</h2>
-    <div class="order-id-display" id="orderStatusId">MH-0000</div>
-    <p id="orderStatusMsg">Your order has been sent to the counter.<br>Please wait while our team prepares your items.</p>
-    <div class="order-ready-state hidden" id="orderReadyBox">
-      <h3>Your order is ready</h3>
-      <p id="orderReadyText"></p>
-      <p style="margin-top:8px;font-size:13px;color:var(--text-secondary);">Please collect your order at the counter.</p>
-    </div>
-  </div>
-
-  <!-- Sticky Cart Bar -->
-  <div class="sticky-cart" id="stickyCart">
-    <div class="cart-info">
-      <div class="cart-count" id="cartCount">0 items</div>
-      <div class="cart-sub" id="cartSub">Est. ₹0</div>
-    </div>
-    <button class="cart-btn" id="btnViewCart">View Cart</button>
-  </div>
-
-  <!-- Cart Sheet -->
-  <div class="sheet-overlay" id="cartOverlay"></div>
-  <div class="sheet" id="cartSheet">
-    <div class="sheet-header">
-      <h3>Your Cart</h3>
-      <button class="sheet-close" id="btnCloseCart">×</button>
-    </div>
-    <div class="cart-items" id="cartItems"></div>
-    <div class="cart-footer">
-      <div class="cart-note">Final price will be confirmed at counter</div>
-      <div class="cart-total-row">
-        <span>Estimated Subtotal</span>
-        <span id="cartTotal">₹0</span>
+      <h2 id="orderStatusTitle">Order Received</h2>
+      <div class="order-id-display" id="orderStatusId">MH-0000</div>
+      <p id="orderStatusMsg">Your order has been sent to the counter.<br>Please wait while our team prepares your items.</p>
+      <div class="order-ready-state hidden" id="orderReadyBox">
+        <h3 id="orderReadyTitle">Your order is ready</h3>
+        <p id="orderReadyText"></p>
       </div>
-      <button class="btn btn-primary" id="btnPlaceOrder">Place Order</button>
+      <button class="btn btn-secondary btn-sm refresh-status-btn" id="btnRefreshStatus">Refresh Status</button>
+      <button class="btn btn-secondary new-order-btn hidden" id="btnNewOrder">Start New Order</button>
+    </div>
+    <div class="sticky-cart" id="stickyCart">
+      <div class="cart-info">
+        <div class="cart-count" id="cartCount">0 items</div>
+        <div class="cart-sub">Final price at counter</div>
+      </div>
+      <button class="cart-btn" id="btnViewCart">View Cart</button>
+    </div>
+    <div class="sheet-overlay" id="cartOverlay"></div>
+    <div class="sheet" id="cartSheet">
+      <div class="sheet-header">
+        <h3>Your Cart</h3>
+        <button class="sheet-close" id="btnCloseCart">×</button>
+      </div>
+      <div class="cart-items" id="cartItems"></div>
+      <div class="cart-footer">
+        <div class="cart-note">Final price will be confirmed at counter</div>
+        <div class="cart-total-row"><span>Items</span><span id="cartTotal">0</span></div>
+        <button class="btn btn-primary btn-full" id="btnPlaceOrder">Place Order</button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ==================== COUNTER VIEW ==================== -->
-<div class="view counter-view" id="view-counter">
-  <div class="counter-header">
-    <div class="counter-brand">
+<div class="view" id="view-counter">
+  <div class="dash-header">
+    <div class="dash-brand">
       <div class="logo">MH</div>
-      <div>
-        <h1>MUNEER HARDWARE</h1>
-        <span>Smart Counter</span>
-      </div>
+      <div><h1>MUNEER HARDWARE</h1><span>Counter</span></div>
     </div>
-    <div class="counter-nav" id="counterNav">
+    <div class="dash-nav" id="counterNav">
       <button class="active" data-panel="dashboard">Dashboard</button>
       <button data-panel="orders">Orders</button>
       <button data-panel="staff">Staff</button>
       <button data-panel="billing">Billing</button>
     </div>
-    <button class="notif-bell" id="notifBell" title="Notifications">
-      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-      <span class="badge hidden" id="notifBadge">0</span>
-    </button>
+    <button class="logout-btn" id="btnLogoutCounter">Logout</button>
   </div>
-  <div class="counter-body">
-    <!-- Dashboard Panel -->
-    <div id="panel-dashboard">
+  <div class="dash-body">
+    <div id="cpanel-dashboard">
       <div class="stats-grid">
-        <div class="stat-card new">
-          <div class="stat-label">New Orders</div>
-          <div class="stat-value" id="statNew">0</div>
-        </div>
-        <div class="stat-card prep">
-          <div class="stat-label">Preparing</div>
-          <div class="stat-value" id="statPrep">0</div>
-        </div>
-        <div class="stat-card ready">
-          <div class="stat-label">Ready</div>
-          <div class="stat-value" id="statReady">0</div>
-        </div>
-        <div class="stat-card done">
-          <div class="stat-label">Completed</div>
-          <div class="stat-value" id="statDone">0</div>
-        </div>
+        <div class="stat-card new"><div class="stat-label">New Orders</div><div class="stat-value" id="statNew">0</div></div>
+        <div class="stat-card prep"><div class="stat-label">Preparing</div><div class="stat-value" id="statPrep">0</div></div>
+        <div class="stat-card ready"><div class="stat-label">Ready</div><div class="stat-value" id="statReady">0</div></div>
+        <div class="stat-card done"><div class="stat-label">Completed</div><div class="stat-value" id="statDone">0</div></div>
       </div>
-      <div class="panel">
-        <div class="panel-header">
-          <h2>Live Orders</h2>
-        </div>
-        <div class="orders-list" id="liveOrders"></div>
+      <div class="panel"><div class="panel-header"><h2>Live Orders</h2></div><div class="orders-list" id="liveOrders"></div></div>
+    </div>
+    <div id="cpanel-orders" class="hidden"><div class="panel"><div class="panel-header"><h2>All Orders</h2></div><div class="orders-list" id="allOrders"></div></div></div>
+    <div id="cpanel-staff" class="hidden">
+      <div class="panel"><div class="panel-header"><h2>Staff Status</h2></div>
+        <table class="staff-table"><thead><tr><th>Staff</th><th>Status</th><th>Current Order</th><th></th></tr></thead><tbody id="staffTableBody"></tbody></table>
       </div>
     </div>
-
-    <!-- Orders Panel -->
-    <div id="panel-orders" class="hidden">
-      <div class="panel">
-        <div class="panel-header"><h2>All Orders</h2></div>
-        <div class="orders-list" id="allOrders"></div>
-      </div>
-    </div>
-
-    <!-- Staff Panel -->
-    <div id="panel-staff" class="hidden">
-      <div class="panel">
-        <div class="panel-header"><h2>Staff Status</h2></div>
-        <table class="staff-table">
-          <thead>
-            <tr>
-              <th>Staff Name</th>
-              <th>Status</th>
-              <th>Current Order</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="staffTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Billing Panel -->
-    <div id="panel-billing" class="hidden">
-      <div class="panel">
-        <div class="panel-header"><h2>Ready for Billing</h2></div>
-        <div class="orders-list" id="billingOrders"></div>
-      </div>
-    </div>
+    <div id="cpanel-billing" class="hidden"><div class="panel"><div class="panel-header"><h2>Ready for Billing</h2></div><div class="orders-list" id="billingOrders"></div></div></div>
   </div>
 </div>
 
 <!-- ==================== STAFF VIEW ==================== -->
-<div class="view staff-view" id="view-staff">
-  <div class="staff-header">
-    <div class="staff-header-top">
-      <h1>MUNEER HARDWARE · Staff Portal</h1>
+<div class="view" id="view-staff">
+  <div class="staff-view">
+    <div class="staff-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h1>MUNEER HARDWARE · Staff</h1>
+        <button class="logout-btn" id="btnLogoutStaff" style="color:rgba(255,255,255,0.7);">Logout</button>
+      </div>
+      <div class="staff-status-bar">
+        <span id="staffNameDisplay">—</span>
+        <span class="staff-status-pill available" id="staffStatusPill">AVAILABLE</span>
+      </div>
     </div>
-    <div class="staff-status-bar">
-      <select class="staff-select" id="staffSelect"></select>
-      <span class="staff-status-pill" id="staffStatusPill">AVAILABLE</span>
+    <div class="staff-body">
+      <div class="staff-empty" id="staffEmpty">
+        <p>No active order assigned.<br>Waiting for orders...</p>
+      </div>
+      <div id="staffOrderContainer" class="hidden"></div>
     </div>
-  </div>
-  <div class="staff-body" id="staffBody">
-    <div class="staff-empty" id="staffEmpty">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      <p>No active order assigned.<br>Waiting for counter...</p>
-    </div>
-    <div id="staffOrderContainer" class="hidden"></div>
   </div>
 </div>
 
-<!-- Assign Staff Modal -->
+<!-- ==================== ADMIN VIEW ==================== -->
+<div class="view" id="view-admin">
+  <div class="dash-header">
+    <div class="dash-brand">
+      <div class="logo">MH</div>
+      <div><h1>MUNEER HARDWARE</h1><span>Admin / Owner</span></div>
+    </div>
+    <div class="dash-nav" id="adminNav">
+      <button class="active" data-panel="dashboard">Dashboard</button>
+      <button data-panel="orders">Orders</button>
+      <button data-panel="staff">Staff</button>
+      <button data-panel="analytics">Analytics</button>
+      <button data-panel="qr">QR Code</button>
+      <button data-panel="settings">Settings</button>
+    </div>
+    <button class="logout-btn" id="btnLogoutAdmin">Logout</button>
+  </div>
+  <div class="dash-body">
+    <div id="apanel-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card new"><div class="stat-label">Today's Sales</div><div class="stat-value" id="aStatSales">₹0</div></div>
+        <div class="stat-card prep"><div class="stat-label">Today's Orders</div><div class="stat-value" id="aStatOrders">0</div></div>
+        <div class="stat-card ready"><div class="stat-label">Items Sold</div><div class="stat-value" id="aStatItems">0</div></div>
+        <div class="stat-card done"><div class="stat-label">Completed</div><div class="stat-value" id="aStatDone">0</div></div>
+      </div>
+      <div class="panel"><div class="panel-header"><h2>Recent Orders</h2></div><div class="orders-list" id="adminRecentOrders"></div></div>
+    </div>
+    <div id="apanel-orders" class="hidden">
+      <div class="search-bar"><input type="text" id="adminOrderSearch" placeholder="Search order #, customer, WhatsApp, staff..."></div>
+      <div class="panel"><div class="panel-header"><h2>Order History</h2></div><div class="orders-list" id="adminAllOrders"></div></div>
+    </div>
+    <div id="apanel-staff" class="hidden">
+      <div class="panel"><div class="panel-header"><h2>Staff Performance</h2></div>
+        <table class="staff-table"><thead><tr><th>Staff</th><th>Status</th><th>Orders Handled</th><th>Current</th></tr></thead><tbody id="adminStaffBody"></tbody></table>
+      </div>
+    </div>
+    <div id="apanel-analytics" class="hidden">
+      <div class="analytics-grid" id="analyticsExtra"></div>
+      <div class="panel"><div class="panel-header"><h2>Category Sales (Completed)</h2></div><div id="categorySales" style="padding:16px;"></div></div>
+    </div>
+    <div id="apanel-qr" class="hidden">
+      <div class="qr-print-section">
+        <h3>Table / Counter QR Code</h3>
+        <p>Print and place on tables. Customers scan to order.</p>
+        <div id="qrCodeContainer"></div>
+        <p style="font-size:11px;word-break:break-all;margin-bottom:12px;" id="qrUrlText"></p>
+        <button class="btn btn-primary btn-sm" id="btnPrintQr">Print QR</button>
+      </div>
+    </div>
+    <div id="apanel-settings" class="hidden">
+      <div class="panel"><div class="panel-header"><h2>Settings</h2></div>
+        <div style="padding:20px;font-size:13px;color:var(--text-secondary);">
+          <p><strong>Shop:</strong> Muneer Hardware & Enterprises</p>
+          <p>Krishnapura, Surathkal, Mangaluru, Karnataka</p>
+          <p>Phone: 090355 99250</p>
+          <p style="margin-top:16px;"><strong>Demo Auth:</strong> Frontend-only prototype. Replace with backend auth for production.</p>
+          <button class="btn btn-secondary btn-sm" style="margin-top:16px;" id="btnClearDemo">Clear Demo Data (keep products)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Modal -->
 <div class="modal-overlay" id="assignModal">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-header">
-      <h2>Assign Staff</h2>
-      <button class="sheet-close" onclick="closeAssignModal()">×</button>
-    </div>
+    <div class="modal-header"><h2>Assign Staff</h2><button class="sheet-close" onclick="closeAssignModal()">×</button></div>
     <div class="modal-body">
       <p style="font-size:14px;margin-bottom:16px;" id="assignOrderInfo"></p>
       <div id="availableStaffList"></div>
@@ -1459,28 +701,15 @@ body {
 <!-- Billing Modal -->
 <div class="modal-overlay" id="billingModal">
   <div class="modal">
-    <div class="modal-header">
-      <h2>Prepare Bill — <span id="billOrderId"></span></h2>
-      <button class="sheet-close" onclick="closeBillingModal()">×</button>
-    </div>
+    <div class="modal-header"><h2>Prepare Bill — <span id="billOrderId"></span></h2><button class="sheet-close" onclick="closeBillingModal()">×</button></div>
     <div class="modal-body">
       <div id="billCustomerInfo" style="margin-bottom:16px;font-size:13px;color:var(--text-secondary);"></div>
+      <div id="billStaffInfo" style="margin-bottom:12px;font-size:13px;"></div>
       <table class="bill-table">
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Unit Price (₹)</th>
-            <th>Disc %</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Product</th><th>Qty</th><th>Unit Price (₹)</th><th>Disc %</th><th>Amount</th></tr></thead>
         <tbody id="billItemsBody"></tbody>
       </table>
-      <div class="gst-row">
-        <label>GST / Tax %</label>
-        <input type="number" id="gstPercent" value="0" min="0" max="28" step="0.5" oninput="recalcBill()">
-      </div>
+      <div class="gst-row"><label>GST / Tax %</label><input type="number" id="gstPercent" value="0" min="0" max="28" step="0.5" oninput="recalcBill()"></div>
       <div class="bill-summary">
         <div class="bill-row"><span>Subtotal</span><span id="billSubtotal">₹0</span></div>
         <div class="bill-row"><span>Total Discount</span><span id="billDiscount">− ₹0</span></div>
@@ -1498,211 +727,502 @@ body {
 <!-- Invoice Modal -->
 <div class="modal-overlay" id="invoiceModal">
   <div class="modal" style="max-width:680px;">
-    <div class="modal-header">
-      <h2>Invoice Preview</h2>
-      <button class="sheet-close" onclick="closeInvoiceModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="invoice" id="invoiceContent"></div>
-    </div>
-    <div class="modal-footer" style="flex-wrap:wrap;">
+    <div class="modal-header"><h2>Invoice Preview</h2><button class="sheet-close" onclick="closeInvoiceModal()">×</button></div>
+    <div class="modal-body"><div class="invoice" id="invoiceContent"></div></div>
+    <div class="modal-footer">
       <button class="btn btn-secondary" id="btnDownloadPdf">Download PDF</button>
-      <button class="btn btn-primary" id="btnSendWhatsApp">Send Bill via WhatsApp</button>
-      <button class="btn btn-success" id="btnCompleteOrder" style="display:none;">Complete Order</button>
-    </div>
-  </div>
-</div>
-
-<!-- WhatsApp Sim Modal -->
-<div class="modal-overlay" id="waModal">
-  <div class="modal" style="max-width:380px;">
-    <div class="modal-header">
-      <h2>WhatsApp Invoice</h2>
-      <button class="sheet-close" onclick="closeWaModal()">×</button>
-    </div>
-    <div class="modal-body" style="text-align:center;padding:32px 24px;">
-      <div style="font-size:48px;margin-bottom:16px;">✓</div>
-      <p style="font-weight:600;margin-bottom:8px;">Invoice generated</p>
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;">✓ WhatsApp number verified</p>
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">✓ Invoice sent successfully</p>
-      <div style="background:#e7f8ef;border-radius:12px;padding:16px;text-align:left;font-size:13px;border:1px solid #a7f3d0;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <div style="width:32px;height:32px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">W</div>
-          <div>
-            <div style="font-weight:600;" id="waName">Customer</div>
-            <div style="font-size:11px;color:var(--text-muted);" id="waNumber">+91 XXXXX</div>
-          </div>
-        </div>
-        <div style="background:#fff;border-radius:8px;padding:10px;font-size:12px;color:var(--text-secondary);">
-          Invoice for order <strong id="waOrderId">MH-0000</strong> has been shared.<br>
-          Grand Total: <strong id="waTotal">₹0</strong>
-        </div>
-      </div>
-      <p style="font-size:11px;color:var(--text-muted);margin-top:16px;">Demo simulation only — no real WhatsApp API connected.</p>
+      <button class="btn btn-primary" id="btnOpenWhatsApp">Open WhatsApp</button>
+      <button class="btn btn-success" id="btnCompleteOrder">Complete Order</button>
     </div>
   </div>
 </div>
 
 <script>
 /* ============================================================
-   MUNEER HARDWARE — SMART QR ORDERING DEMO
-   Single-file state-driven application
+   MUNEER HARDWARE — PRODUCTION-READY PROTOTYPE
+   Single-file · Service-layer architecture · Real QR
    ============================================================ */
 
+// ========== CONFIG (easy to change) ==========
+const CONFIG = {
+  shopName: "Muneer Hardware & Enterprises",
+  shopAddress: "Krishnapura, Surathkal, Mangaluru, Karnataka",
+  shopPhone: "090355 99250",
+  customerUrl: "",
+  credentials: {
+    admin: { username: "admin", password: "admin123" },
+    counter: { username: "counter", password: "counter123" }
+  },
+  staffPassword: "staff123",
+  pollIntervalMs: 2000,
+  storageKey: "mh_shop_v2",
+  sessionKey: "mh_session_v2"
+};
+
+const STAFF_ACCOUNTS = [
+  { id: 1, name: "Shail", username: "shail", password: CONFIG.staffPassword, status: "BUSY", currentOrderId: null },
+  { id: 2, name: "Suhail", username: "suhail", password: CONFIG.staffPassword, status: "AVAILABLE", currentOrderId: null },
+  { id: 3, name: "Sameer", username: "sameer", password: CONFIG.staffPassword, status: "BUSY", currentOrderId: null },
+  { id: 4, name: "Niyas", username: "niyas", password: CONFIG.staffPassword, status: "AVAILABLE", currentOrderId: null },
+  { id: 5, name: "Ashraf", username: "ashraf", password: CONFIG.staffPassword, status: "BUSY", currentOrderId: null }
+];
+
+// Product catalogue — basePrice used only as editable billing default
 const PRODUCTS = [
-  { id: 1, name: "PVC Elbow 1\"", cat: "Plumbing", desc: "90° elbow, Schedule 40", unit: "pc", price: 28, icon: "PE" },
-  { id: 2, name: "PVC Tee 1\"", cat: "Plumbing", desc: "Equal tee fitting", unit: "pc", price: 35, icon: "PT" },
-  { id: 3, name: "PVC Coupler 1\"", cat: "Plumbing", desc: "Socket coupler", unit: "pc", price: 18, icon: "PC" },
-  { id: 4, name: "CPVC Pipe 20mm × 3m", cat: "Pipes & Fittings", desc: "Hot water grade", unit: "len", price: 185, icon: "CP" },
-  { id: 5, name: "GI Pipe ½\" × 6m", cat: "Pipes & Fittings", desc: "Medium duty galvanised", unit: "len", price: 420, icon: "GI" },
-  { id: 6, name: "Teflon Tape ½\"", cat: "Plumbing", desc: "Thread seal tape 12m", unit: "roll", price: 25, icon: "TT" },
-  { id: 7, name: "Ball Valve ½\" Brass", cat: "Plumbing", desc: "Full bore, lever type", unit: "pc", price: 145, icon: "BV" },
-  { id: 8, name: "Pipe Clamp 1\"", cat: "Plumbing", desc: "Rubber lined saddle", unit: "pc", price: 22, icon: "CL" },
-  { id: 9, name: "Wall Plug 6mm", cat: "Fasteners", desc: "Nylon wall plug pack of 50", unit: "pkt", price: 35, icon: "WP" },
-  { id: 10, name: "Self Tapping Screw 1\"", cat: "Fasteners", desc: "Philips head, pack of 100", unit: "pkt", price: 55, icon: "ST" },
-  { id: 11, name: "Wood Screw 1½\"", cat: "Fasteners", desc: "Countersunk, pack of 50", unit: "pkt", price: 48, icon: "WS" },
-  { id: 12, name: "Nut & Bolt M8 × 40", cat: "Fasteners", desc: "Hex head with nut, pack of 20", unit: "pkt", price: 75, icon: "NB" },
-  { id: 13, name: "Electrical Tape Black", cat: "Electrical", desc: "PVC insulation 20m", unit: "roll", price: 30, icon: "ET" },
-  { id: 14, name: "Modular Switch 6A", cat: "Electrical", desc: "1-way white", unit: "pc", price: 65, icon: "SW" },
-  { id: 15, name: "Socket 6A 3-Pin", cat: "Electrical", desc: "Modular shuttered", unit: "pc", price: 85, icon: "SK" },
-  { id: 16, name: "MCB 16A Single Pole", cat: "Electrical", desc: "C-curve, 6kA", unit: "pc", price: 195, icon: "MC" },
-  { id: 17, name: "LED Bulb 9W", cat: "Electrical", desc: "Cool white, B22", unit: "pc", price: 90, icon: "LB" },
-  { id: 18, name: "Copper Wire 1.5 sq.mm", cat: "Electrical", desc: "90m coil, FR grade", unit: "coil", price: 1850, icon: "CW" },
-  { id: 19, name: "Claw Hammer 500g", cat: "Hand Tools", desc: "Steel shaft, rubber grip", unit: "pc", price: 280, icon: "HM" },
-  { id: 20, name: "Screwdriver Set 6pc", cat: "Hand Tools", desc: "Philips + Flat", unit: "set", price: 195, icon: "SD" },
-  { id: 21, name: "Combination Pliers 8\"", cat: "Hand Tools", desc: "Chrome vanadium", unit: "pc", price: 220, icon: "PL" },
-  { id: 22, name: "Adjustable Wrench 10\"", cat: "Hand Tools", desc: "Chrome plated", unit: "pc", price: 310, icon: "AW" },
-  { id: 23, name: "Measuring Tape 5m", cat: "Hand Tools", desc: "Steel blade, auto lock", unit: "pc", price: 145, icon: "MT" },
-  { id: 24, name: "HSS Drill Bit Set 13pc", cat: "Power Tools", desc: "1–13mm in case", unit: "set", price: 380, icon: "DB" },
-  { id: 25, name: "Cutting Disc 4\"", cat: "Power Tools", desc: "Metal cutting, 1.2mm", unit: "pc", price: 45, icon: "CD" },
-  { id: 26, name: "Paint Brush 2\"", cat: "Paint & Accessories", desc: "Pure bristle", unit: "pc", price: 55, icon: "PB" },
-  { id: 27, name: "Paint Roller 7\"", cat: "Paint & Accessories", desc: "Foam, with tray", unit: "set", price: 120, icon: "PR" },
-  { id: 28, name: "Silicone Sealant Clear", cat: "General Hardware", desc: "280ml cartridge", unit: "tube", price: 165, icon: "SS" },
-  { id: 29, name: "Fevicol SH 500g", cat: "General Hardware", desc: "Wood adhesive", unit: "jar", price: 145, icon: "FV" },
-  { id: 30, name: "Safety Gloves Cotton", cat: "Safety", desc: "Knitted, pack of 12", unit: "pkt", price: 90, icon: "SG" },
-  { id: 31, name: "Safety Goggles", cat: "Safety", desc: "Clear polycarbonate", unit: "pc", price: 75, icon: "GO" },
-  { id: 32, name: "Door Hinge 4\" SS", cat: "Building Hardware", desc: "Stainless steel, pair", unit: "pair", price: 95, icon: "DH" },
-  { id: 33, name: "Tower Bolt 6\"", cat: "Building Hardware", desc: "MS, zinc plated", unit: "pc", price: 55, icon: "TB" },
-  { id: 34, name: "Padlock 40mm", cat: "Building Hardware", desc: "Brass body, 3 keys", unit: "pc", price: 180, icon: "PL" },
-  { id: 35, name: "PVC Solvent Cement 100ml", cat: "Plumbing", desc: "For PVC joints", unit: "tin", price: 65, icon: "SC" },
-  { id: 36, name: "Angle Valve Chrome", cat: "Plumbing", desc: "½\" × ½\", ceramic disc", unit: "pc", price: 210, icon: "AV" }
+  { id: 1, name: "PVC Elbow", cat: "Plumbing", spec: "½ inch · 90°", unit: "pc", desc: "Schedule 40", basePrice: 28, img: "https://placehold.co/300x300/ccfbf1/0f766e?text=Elbow+1%2F2" },
+  { id: 2, name: "PVC Elbow", cat: "Plumbing", spec: "¾ inch · 90°", unit: "pc", desc: "Schedule 40", basePrice: 32, img: "https://placehold.co/300x300/ccfbf1/0f766e?text=Elbow+3%2F4" },
+  { id: 3, name: "PVC Elbow", cat: "Plumbing", spec: "1 inch · 90°", unit: "pc", desc: "Schedule 40", basePrice: 38, img: "https://placehold.co/300x300/ccfbf1/0f766e?text=Elbow+1" },
+  { id: 4, name: "PVC Elbow", cat: "Plumbing", spec: "1¼ inch · 90°", unit: "pc", desc: "Schedule 40", basePrice: 48, img: "https://placehold.co/300x300/ccfbf1/0f766e?text=Elbow+1.25" },
+  { id: 5, name: "PVC Elbow", cat: "Plumbing", spec: "1½ inch · 90°", unit: "pc", desc: "Schedule 40", basePrice: 55, img: "https://placehold.co/300x300/ccfbf1/0f766e?text=Elbow+1.5" },
+  { id: 6, name: "PVC Elbow", cat: "Plumbing", spec: "2 inch · 90°", unit: "pc", desc: "Schedule 40", basePrice: 72, img: "https://placehold.co/300x300/ccfbf1/0f766e?text=Elbow+2" },
+  { id: 7, name: "PVC Tee", cat: "Plumbing", spec: "1 inch Equal", unit: "pc", desc: "Equal tee", basePrice: 42, img: "https://placehold.co/300x300/99f6e4/0f766e?text=Tee+1" },
+  { id: 8, name: "PVC Tee", cat: "Plumbing", spec: "¾ inch Equal", unit: "pc", desc: "Equal tee", basePrice: 35, img: "https://placehold.co/300x300/99f6e4/0f766e?text=Tee+3%2F4" },
+  { id: 9, name: "PVC Coupler", cat: "Plumbing", spec: "1 inch", unit: "pc", desc: "Socket coupler", basePrice: 22, img: "https://placehold.co/300x300/5eead4/134e4a?text=Coupler" },
+  { id: 10, name: "PVC Coupler", cat: "Plumbing", spec: "½ inch", unit: "pc", desc: "Socket coupler", basePrice: 15, img: "https://placehold.co/300x300/5eead4/134e4a?text=Coupler+1%2F2" },
+  { id: 11, name: "Ball Valve Brass", cat: "Plumbing", spec: "½ inch Full Bore", unit: "pc", desc: "Lever type", basePrice: 145, img: "https://placehold.co/300x300/fef3c7/92400e?text=Ball+Valve" },
+  { id: 12, name: "Ball Valve Brass", cat: "Plumbing", spec: "¾ inch Full Bore", unit: "pc", desc: "Lever type", basePrice: 185, img: "https://placehold.co/300x300/fef3c7/92400e?text=Valve+3%2F4" },
+  { id: 13, name: "Angle Valve", cat: "Plumbing", spec: "½×½ Chrome", unit: "pc", desc: "Ceramic disc", basePrice: 210, img: "https://placehold.co/300x300/e0e7ff/3730a3?text=Angle+Valve" },
+  { id: 14, name: "Bib Cock", cat: "Plumbing", spec: "½ inch Brass", unit: "pc", desc: "Wall mount", basePrice: 165, img: "https://placehold.co/300x300/fce7f3/9d174d?text=Bib+Cock" },
+  { id: 15, name: "Teflon Tape", cat: "Plumbing", spec: "½ inch × 12m", unit: "roll", desc: "Thread seal", basePrice: 25, img: "https://placehold.co/300x300/f1f5f9/475569?text=Teflon" },
+  { id: 16, name: "Pipe Clamp", cat: "Plumbing", spec: "1 inch Saddle", unit: "pc", desc: "Rubber lined", basePrice: 22, img: "https://placehold.co/300x300/e2e8f0/334155?text=Clamp" },
+  { id: 17, name: "PVC Solvent Cement", cat: "Plumbing", spec: "100 ml", unit: "tin", desc: "For PVC joints", basePrice: 65, img: "https://placehold.co/300x300/fecaca/991b1b?text=Solvent" },
+  { id: 18, name: "PVC Pipe", cat: "Pipes & Fittings", spec: "½ inch × 3m", unit: "len", desc: "Schedule 40", basePrice: 95, img: "https://placehold.co/300x300/bfdbfe/1e40af?text=PVC+1%2F2" },
+  { id: 19, name: "PVC Pipe", cat: "Pipes & Fittings", spec: "¾ inch × 3m", unit: "len", desc: "Schedule 40", basePrice: 125, img: "https://placehold.co/300x300/bfdbfe/1e40af?text=PVC+3%2F4" },
+  { id: 20, name: "PVC Pipe", cat: "Pipes & Fittings", spec: "1 inch × 3m", unit: "len", desc: "Schedule 40", basePrice: 165, img: "https://placehold.co/300x300/bfdbfe/1e40af?text=PVC+1" },
+  { id: 21, name: "PVC Pipe", cat: "Pipes & Fittings", spec: "1½ inch × 3m", unit: "len", desc: "Schedule 40", basePrice: 245, img: "https://placehold.co/300x300/bfdbfe/1e40af?text=PVC+1.5" },
+  { id: 22, name: "PVC Pipe", cat: "Pipes & Fittings", spec: "2 inch × 3m", unit: "len", desc: "Schedule 40", basePrice: 320, img: "https://placehold.co/300x300/bfdbfe/1e40af?text=PVC+2" },
+  { id: 23, name: "CPVC Pipe", cat: "Pipes & Fittings", spec: "20mm × 3m", unit: "len", desc: "Hot water grade", basePrice: 185, img: "https://placehold.co/300x300/a5f3fc/0e7490?text=CPVC+20" },
+  { id: 24, name: "CPVC Pipe", cat: "Pipes & Fittings", spec: "25mm × 3m", unit: "len", desc: "Hot water grade", basePrice: 245, img: "https://placehold.co/300x300/a5f3fc/0e7490?text=CPVC+25" },
+  { id: 25, name: "GI Pipe", cat: "Pipes & Fittings", spec: "½ inch × 6m", unit: "len", desc: "Medium duty", basePrice: 420, img: "https://placehold.co/300x300/cbd5e1/334155?text=GI+1%2F2" },
+  { id: 26, name: "GI Pipe", cat: "Pipes & Fittings", spec: "¾ inch × 6m", unit: "len", desc: "Medium duty", basePrice: 520, img: "https://placehold.co/300x300/cbd5e1/334155?text=GI+3%2F4" },
+  { id: 27, name: "Modular Switch", cat: "Electrical", spec: "6A 1-Way White", unit: "pc", desc: "Modular", basePrice: 65, img: "https://placehold.co/300x300/fef9c3/854d0e?text=Switch" },
+  { id: 28, name: "Socket 3-Pin", cat: "Electrical", spec: "6A Shuttered", unit: "pc", desc: "Modular", basePrice: 85, img: "https://placehold.co/300x300/fef9c3/854d0e?text=Socket" },
+  { id: 29, name: "MCB Single Pole", cat: "Electrical", spec: "16A C-curve 6kA", unit: "pc", desc: "Protection", basePrice: 195, img: "https://placehold.co/300x300/fecaca/991b1b?text=MCB+16A" },
+  { id: 30, name: "MCB Single Pole", cat: "Electrical", spec: "32A C-curve 6kA", unit: "pc", desc: "Protection", basePrice: 245, img: "https://placehold.co/300x300/fecaca/991b1b?text=MCB+32A" },
+  { id: 31, name: "LED Bulb", cat: "Electrical", spec: "9W Cool White B22", unit: "pc", desc: "Energy saver", basePrice: 90, img: "https://placehold.co/300x300/fef08a/854d0e?text=LED+9W" },
+  { id: 32, name: "LED Bulb", cat: "Electrical", spec: "12W Cool White B22", unit: "pc", desc: "Energy saver", basePrice: 110, img: "https://placehold.co/300x300/fef08a/854d0e?text=LED+12W" },
+  { id: 33, name: "Copper Wire", cat: "Electrical", spec: "1.5 sq.mm 90m FR", unit: "coil", desc: "House wiring", basePrice: 1850, img: "https://placehold.co/300x300/fdba74/9a3412?text=Wire+1.5" },
+  { id: 34, name: "Copper Wire", cat: "Electrical", spec: "2.5 sq.mm 90m FR", unit: "coil", desc: "House wiring", basePrice: 2850, img: "https://placehold.co/300x300/fdba74/9a3412?text=Wire+2.5" },
+  { id: 35, name: "Electrical Tape", cat: "Electrical", spec: "Black 20m", unit: "roll", desc: "PVC insulation", basePrice: 30, img: "https://placehold.co/300x300/1e293b/f8fafc?text=E-Tape" },
+  { id: 36, name: "Claw Hammer", cat: "Hand Tools", spec: "500g Steel Shaft", unit: "pc", desc: "Rubber grip", basePrice: 280, img: "https://placehold.co/300x300/e2e8f0/475569?text=Hammer" },
+  { id: 37, name: "Screwdriver Set", cat: "Hand Tools", spec: "6pc Philips+Flat", unit: "set", desc: "Chrome vanadium", basePrice: 195, img: "https://placehold.co/300x300/e2e8f0/475569?text=Screwdriver" },
+  { id: 38, name: "Combination Pliers", cat: "Hand Tools", spec: "8 inch", unit: "pc", desc: "Chrome vanadium", basePrice: 220, img: "https://placehold.co/300x300/e2e8f0/475569?text=Pliers" },
+  { id: 39, name: "Adjustable Wrench", cat: "Hand Tools", spec: "10 inch", unit: "pc", desc: "Chrome plated", basePrice: 310, img: "https://placehold.co/300x300/e2e8f0/475569?text=Wrench" },
+  { id: 40, name: "Measuring Tape", cat: "Hand Tools", spec: "5m Auto Lock", unit: "pc", desc: "Steel blade", basePrice: 145, img: "https://placehold.co/300x300/e2e8f0/475569?text=Tape+5m" },
+  { id: 41, name: "HSS Drill Bit Set", cat: "Power Tools", spec: "13pc 1–13mm", unit: "set", desc: "In case", basePrice: 380, img: "https://placehold.co/300x300/c7d2fe/3730a3?text=Drill+Bits" },
+  { id: 42, name: "Cutting Disc", cat: "Power Tools", spec: "4 inch 1.2mm", unit: "pc", desc: "Metal cutting", basePrice: 45, img: "https://placehold.co/300x300/c7d2fe/3730a3?text=Disc" },
+  { id: 43, name: "Wall Plug", cat: "Fasteners", spec: "6mm Pack of 50", unit: "pkt", desc: "Nylon", basePrice: 35, img: "https://placehold.co/300x300/fde68a/92400e?text=Wall+Plug" },
+  { id: 44, name: "Self Tapping Screw", cat: "Fasteners", spec: "1 inch Pack 100", unit: "pkt", desc: "Philips head", basePrice: 55, img: "https://placehold.co/300x300/fde68a/92400e?text=Screw" },
+  { id: 45, name: "Wood Screw", cat: "Fasteners", spec: "1½ inch Pack 50", unit: "pkt", desc: "Countersunk", basePrice: 48, img: "https://placehold.co/300x300/fde68a/92400e?text=Wood+Screw" },
+  { id: 46, name: "Nut & Bolt", cat: "Fasteners", spec: "M8×40 Pack 20", unit: "pkt", desc: "Hex + nut", basePrice: 75, img: "https://placehold.co/300x300/fde68a/92400e?text=Nut+Bolt" },
+  { id: 47, name: "Paint Brush", cat: "Paint & Accessories", spec: "2 inch Pure Bristle", unit: "pc", desc: "For emulsion", basePrice: 55, img: "https://placehold.co/300x300/bbf7d0/166534?text=Brush" },
+  { id: 48, name: "Paint Roller", cat: "Paint & Accessories", spec: "7 inch + Tray", unit: "set", desc: "Foam", basePrice: 120, img: "https://placehold.co/300x300/bbf7d0/166534?text=Roller" },
+  { id: 49, name: "Silicone Sealant", cat: "Paint & Accessories", spec: "Clear 280ml", unit: "tube", desc: "Cartridge", basePrice: 165, img: "https://placehold.co/300x300/bbf7d0/166534?text=Sealant" },
+  { id: 50, name: "Door Hinge SS", cat: "Building Hardware", spec: "4 inch Pair", unit: "pair", desc: "Stainless steel", basePrice: 95, img: "https://placehold.co/300x300/e2e8f0/334155?text=Hinge" },
+  { id: 51, name: "Tower Bolt", cat: "Building Hardware", spec: "6 inch MS", unit: "pc", desc: "Zinc plated", basePrice: 55, img: "https://placehold.co/300x300/e2e8f0/334155?text=Tower+Bolt" },
+  { id: 52, name: "Padlock", cat: "Building Hardware", spec: "40mm Brass 3 Keys", unit: "pc", desc: "Brass body", basePrice: 180, img: "https://placehold.co/300x300/e2e8f0/334155?text=Padlock" },
+  { id: 53, name: "Safety Gloves", cat: "Safety", spec: "Cotton Pack 12", unit: "pkt", desc: "Knitted", basePrice: 90, img: "https://placehold.co/300x300/fecdd3/9f1239?text=Gloves" },
+  { id: 54, name: "Safety Goggles", cat: "Safety", spec: "Clear Polycarbonate", unit: "pc", desc: "Eye protection", basePrice: 75, img: "https://placehold.co/300x300/fecdd3/9f1239?text=Goggles" },
+  { id: 55, name: "Fevicol SH", cat: "General Hardware", spec: "500g Wood Adhesive", unit: "jar", desc: "Adhesive", basePrice: 145, img: "https://placehold.co/300x300/fef3c7/854d0e?text=Fevicol" }
 ];
 
-const CATEGORIES = ["All", "Plumbing", "Electrical", "Hand Tools", "Power Tools", "Fasteners", "Pipes & Fittings", "Paint & Accessories", "Building Hardware", "Safety", "General Hardware"];
+const CATEGORIES = ["All", "Plumbing", "Pipes & Fittings", "Electrical", "Hand Tools", "Power Tools", "Fasteners", "Paint & Accessories", "Building Hardware", "Safety", "General Hardware"];
 
-const STAFF_DEFAULT = [
-  { id: 1, name: "Shail", status: "BUSY", orderId: "MH-1021" },
-  { id: 2, name: "Suhail", status: "AVAILABLE", orderId: null },
-  { id: 3, name: "Sameer", status: "BUSY", orderId: "MH-1022" },
-  { id: 4, name: "Niyas", status: "AVAILABLE", orderId: null },
-  { id: 5, name: "Ashraf", status: "BUSY", orderId: "MH-1023" }
-];
+// ========== SERVICE LAYER ==========
+const storageService = {
+  getShop() {
+    try {
+      const raw = localStorage.getItem(CONFIG.storageKey);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  },
+  saveShop(data) {
+    try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(data)); } catch (e) {}
+  },
+  getSession() {
+    try {
+      const raw = sessionStorage.getItem(CONFIG.sessionKey);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  },
+  saveSession(data) {
+    try { sessionStorage.setItem(CONFIG.sessionKey, JSON.stringify(data)); } catch (e) {}
+  },
+  clearSession() {
+    try { sessionStorage.removeItem(CONFIG.sessionKey); } catch (e) {}
+  }
+};
 
-// ---------- STATE ----------
-let state = {
+const authService = {
+  login(role, username, password, staffId) {
+    if (role === "admin") {
+      if (username === CONFIG.credentials.admin.username && password === CONFIG.credentials.admin.password) {
+        return { role: "admin", name: "Admin" };
+      }
+    }
+    if (role === "counter") {
+      if (username === CONFIG.credentials.counter.username && password === CONFIG.credentials.counter.password) {
+        return { role: "counter", name: "Counter" };
+      }
+    }
+    if (role === "staff") {
+      const s = STAFF_ACCOUNTS.find(x => x.id === staffId);
+      if (s && password === s.password) {
+        return { role: "staff", staffId: s.id, name: s.name };
+      }
+    }
+    return null;
+  },
+  getCurrent() {
+    const sess = storageService.getSession();
+    return sess && sess.auth ? sess.auth : null;
+  },
+  setAuth(auth) {
+    const sess = storageService.getSession() || {};
+    sess.auth = auth;
+    storageService.saveSession(sess);
+  },
+  logout() {
+    const sess = storageService.getSession() || {};
+    delete sess.auth;
+    storageService.saveSession(sess);
+  }
+};
+
+const orderService = {
+  _data: null,
+  init() {
+    let shop = storageService.getShop();
+    if (!shop) {
+      shop = {
+        orders: [],
+        staff: STAFF_ACCOUNTS.map(s => ({ id: s.id, name: s.name, status: s.status, currentOrderId: null })),
+        orderCounter: 1000
+      };
+      storageService.saveShop(shop);
+    }
+    if (!shop.staff || shop.staff.length !== STAFF_ACCOUNTS.length) {
+      shop.staff = STAFF_ACCOUNTS.map(s => {
+        const existing = (shop.staff || []).find(x => x.id === s.id);
+        return existing || { id: s.id, name: s.name, status: "AVAILABLE", currentOrderId: null };
+      });
+      storageService.saveShop(shop);
+    }
+    this._data = shop;
+  },
+  getAll() { return this._data.orders; },
+  getById(id) { return this._data.orders.find(o => o.id === id); },
+  getStaff() { return this._data.staff; },
+  getStaffById(id) { return this._data.staff.find(s => s.id === id); },
+  nextId() {
+    this._data.orderCounter++;
+    return "MH-" + String(this._data.orderCounter).padStart(4, "0");
+  },
+  create(order) {
+    this._data.orders.unshift(order);
+    this._persist();
+    return order;
+  },
+  update(order) {
+    const i = this._data.orders.findIndex(o => o.id === order.id);
+    if (i >= 0) this._data.orders[i] = order;
+    this._persist();
+  },
+  assign(orderId, staffId) {
+    const order = this.getById(orderId);
+    const staff = this.getStaffById(staffId);
+    if (!order || !staff || staff.status !== "AVAILABLE") return false;
+    order.status = "ASSIGNED";
+    order.assignedStaffId = staff.id;
+    order.assignedStaffName = staff.name;
+    order.collected = {};
+    staff.status = "BUSY";
+    staff.currentOrderId = order.id;
+    this._persist();
+    return true;
+  },
+  staffSubmit(orderId, staffId) {
+    const order = this.getById(orderId);
+    const staff = this.getStaffById(staffId);
+    if (!order || !staff) return false;
+    order.status = "READY";
+    order.collectedByStaffId = staff.id;
+    order.collectedByStaffName = staff.name;
+    staff.status = "AVAILABLE";
+    staff.currentOrderId = null;
+    this._persist();
+    return true;
+  },
+  complete(orderId) {
+    const order = this.getById(orderId);
+    if (!order) return;
+    order.status = "COMPLETED";
+    order.completedAt = new Date().toISOString();
+    const staff = this._data.staff.find(s => s.currentOrderId === orderId);
+    if (staff) {
+      staff.status = "AVAILABLE";
+      staff.currentOrderId = null;
+    }
+    this._persist();
+  },
+  _persist() { storageService.saveShop(this._data); },
+  reload() {
+    const shop = storageService.getShop();
+    if (shop) this._data = shop;
+  }
+};
+
+const notificationService = {
+  audioCtx: null,
+  permissionAsked: false,
+  initAudio() {
+    try {
+      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+    } catch (e) {}
+  },
+  playBeep() {
+    this.initAudio();
+    if (!this.audioCtx) return;
+    try {
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+      osc.frequency.value = 880;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.5);
+      osc.start(this.audioCtx.currentTime);
+      osc.stop(this.audioCtx.currentTime + 0.5);
+      setTimeout(() => {
+        const osc2 = this.audioCtx.createOscillator();
+        const g2 = this.audioCtx.createGain();
+        osc2.connect(g2);
+        g2.connect(this.audioCtx.destination);
+        osc2.frequency.value = 1100;
+        osc2.type = "sine";
+        g2.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+        g2.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.4);
+        osc2.start();
+        osc2.stop(this.audioCtx.currentTime + 0.4);
+      }, 200);
+    } catch (e) {}
+  },
+  async requestPermission() {
+    if (!("Notification" in window) || this.permissionAsked) return;
+    this.permissionAsked = true;
+    try { await Notification.requestPermission(); } catch (e) {}
+  },
+  showBrowser(title, body) {
+    if ("Notification" in window && Notification.permission === "granted") {
+      try { new Notification(title, { body }); } catch (e) {}
+    }
+  },
+  toast(msg, type) {
+    const c = document.getElementById("toastContainer");
+    const t = document.createElement("div");
+    t.className = "toast " + (type || "info");
+    t.innerHTML = `<span>${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">×</button>`;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 4500);
+  }
+};
+
+const analyticsService = {
+  todayBounds() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  },
+  getTodayStats() {
+    const orders = orderService.getAll();
+    const start = this.todayBounds();
+    const today = orders.filter(o => new Date(o.createdAt).getTime() >= start);
+    const completed = today.filter(o => o.status === "COMPLETED" && o.bill);
+    let sales = 0, items = 0;
+    completed.forEach(o => {
+      sales += o.bill.grand || 0;
+      items += o.items.reduce((s, i) => s + i.qty, 0);
+    });
+    return {
+      sales,
+      orders: today.length,
+      items,
+      completed: completed.length,
+      pending: today.filter(o => o.status !== "COMPLETED").length,
+      ready: today.filter(o => o.status === "READY").length
+    };
+  },
+  staffPerformance() {
+    const orders = orderService.getAll();
+    return orderService.getStaff().map(s => {
+      const handled = orders.filter(o => o.assignedStaffId === s.id || o.collectedByStaffId === s.id).length;
+      const completed = orders.filter(o => o.collectedByStaffId === s.id && o.status === "COMPLETED").length;
+      return { ...s, handled, completed };
+    });
+  },
+  categorySales() {
+    const map = {};
+    orderService.getAll().filter(o => o.status === "COMPLETED").forEach(o => {
+      o.items.forEach(item => {
+        const p = PRODUCTS.find(x => x.id === item.id);
+        const cat = p ? p.cat : "Other";
+        map[cat] = (map[cat] || 0) + item.qty;
+      });
+    });
+    return map;
+  }
+};
+
+// ========== APP STATE ==========
+let app = {
   view: "customer",
+  loginRole: "counter",
   customer: { name: "", whatsapp: "" },
   cart: [],
   currentOrderId: null,
-  orders: [],
-  staff: JSON.parse(JSON.stringify(STAFF_DEFAULT)),
-  selectedStaffId: 2,
   activeCategory: "All",
   searchQuery: "",
-  orderCounter: 1024,
-  notifications: [],
+  lastKnownAssignments: {},
+  billData: null,
   currentBillOrder: null,
-  billData: null
+  _currentInvoiceOrder: null
 };
 
-// Load from localStorage
-function loadState() {
-  try {
-    const saved = localStorage.getItem("mh_demo_state");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      state = { ...state, ...parsed };
-      // Ensure staff has correct structure
-      if (!state.staff || state.staff.length === 0) {
-        state.staff = JSON.parse(JSON.stringify(STAFF_DEFAULT));
-      }
-    }
-  } catch (e) {}
-}
-function saveState() {
-  try {
-    localStorage.setItem("mh_demo_state", JSON.stringify({
-      customer: state.customer,
-      cart: state.cart,
-      currentOrderId: state.currentOrderId,
-      orders: state.orders,
-      staff: state.staff,
-      selectedStaffId: state.selectedStaffId,
-      orderCounter: state.orderCounter
-    }));
-  } catch (e) {}
-}
-
-// ---------- UTILITIES ----------
-function toast(msg, type = "info") {
-  const c = document.getElementById("toastContainer");
-  const t = document.createElement("div");
-  t.className = `toast ${type}`;
-  t.innerHTML = `<span>${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">×</button>`;
-  c.appendChild(t);
-  setTimeout(() => t.remove(), 4500);
-}
-
 function formatINR(n) {
-  return "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  return "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 }
 
-function generateOrderId() {
-  state.orderCounter++;
-  return "MH-" + state.orderCounter;
+function getCustomerUrl() {
+  if (CONFIG.customerUrl) return CONFIG.customerUrl;
+  const u = new URL(window.location.href);
+  u.hash = "customer";
+  u.search = "";
+  return u.toString();
 }
 
-// ---------- VIEW SWITCHING ----------
-document.querySelectorAll(".demo-tab").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".demo-tab").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    state.view = btn.dataset.view;
-    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-    document.getElementById("view-" + state.view).classList.add("active");
-    if (state.view === "counter") renderCounter();
-    if (state.view === "staff") renderStaff();
-    if (state.view === "customer") renderCustomer();
-  });
-});
+function getProductFallback(name) {
+  return "https://placehold.co/300x300/e2e8f0/0f766e?text=" + encodeURIComponent((name || "Item").slice(0, 12));
+}
 
-// ---------- CUSTOMER ----------
+// ========== ROUTING ==========
+function showView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  const el = document.getElementById("view-" + name);
+  if (el) el.classList.add("active");
+  app.view = name;
+}
+
+function routeFromHash() {
+  const hash = (location.hash || "").replace("#", "").toLowerCase();
+  const auth = authService.getCurrent();
+  if (hash === "login" || hash === "counter" || hash === "staff" || hash === "admin") {
+    if (auth && (hash === "login" || hash === auth.role)) {
+      showView(auth.role);
+      if (auth.role === "counter") renderCounter();
+      if (auth.role === "staff") renderStaff();
+      if (auth.role === "admin") renderAdmin();
+    } else {
+      showView("login");
+      initStaffSelect();
+    }
+    return;
+  }
+  showView("customer");
+  loadCustomerSession();
+  renderCustomer();
+}
+
+// ========== CUSTOMER SESSION ==========
+function loadCustomerSession() {
+  const sess = storageService.getSession() || {};
+  const cust = sess.customer || null;
+  if (cust && cust.currentOrderId) {
+    orderService.reload();
+    const order = orderService.getById(cust.currentOrderId);
+    if (order && order.status !== "COMPLETED") {
+      app.customer = { name: cust.name, whatsapp: cust.whatsapp };
+      app.currentOrderId = cust.currentOrderId;
+      app.cart = [];
+      return;
+    }
+    // Order completed or missing → clear stale session
+    delete sess.customer;
+    storageService.saveSession(sess);
+  }
+  app.customer = { name: "", whatsapp: "" };
+  app.cart = [];
+  app.currentOrderId = null;
+}
+
+function saveCustomerSession() {
+  const sess = storageService.getSession() || {};
+  if (app.currentOrderId) {
+    sess.customer = {
+      name: app.customer.name,
+      whatsapp: app.customer.whatsapp,
+      currentOrderId: app.currentOrderId
+    };
+  } else {
+    delete sess.customer;
+  }
+  storageService.saveSession(sess);
+}
+
+function clearCustomerSession() {
+  app.customer = { name: "", whatsapp: "" };
+  app.cart = [];
+  app.currentOrderId = null;
+  const sess = storageService.getSession() || {};
+  delete sess.customer;
+  storageService.saveSession(sess);
+  document.getElementById("custName").value = "";
+  document.getElementById("custWhatsApp").value = "";
+}
+
+// ========== CUSTOMER UI ==========
 function renderCustomer() {
-  if (state.customer.name && state.currentOrderId) {
-    const order = state.orders.find(o => o.id === state.currentOrderId);
+  orderService.reload();
+  if (app.currentOrderId) {
+    const order = orderService.getById(app.currentOrderId);
     if (order) {
       document.getElementById("welcomeScreen").classList.add("hidden");
       document.getElementById("shopScreen").classList.add("hidden");
       document.getElementById("orderStatusScreen").classList.remove("hidden");
       document.getElementById("orderStatusId").textContent = order.id;
-      if (order.status === "COMPLETED" || order.status === "READY") {
+      document.getElementById("btnNewOrder").classList.add("hidden");
+      if (order.status === "COMPLETED") {
+        document.getElementById("orderStatusTitle").textContent = "Order Completed";
+        document.getElementById("orderStatusMsg").classList.add("hidden");
+        document.getElementById("orderReadyBox").classList.remove("hidden");
+        document.getElementById("orderReadyTitle").textContent = "Thank you!";
+        document.getElementById("orderReadyText").textContent = `${order.customerName}, your order ${order.id} is complete. Please collect at the counter.`;
+        document.getElementById("btnNewOrder").classList.remove("hidden");
+      } else if (order.status === "READY" || order.status === "BILLING") {
         document.getElementById("orderStatusTitle").textContent = "Your order is ready";
         document.getElementById("orderStatusMsg").classList.add("hidden");
         document.getElementById("orderReadyBox").classList.remove("hidden");
-        document.getElementById("orderReadyText").textContent = `${order.customerName}, your order ${order.id} is ready.`;
+        document.getElementById("orderReadyTitle").textContent = "Your order is ready";
+        document.getElementById("orderReadyText").textContent = `${order.customerName}, your order ${order.id} is ready. Please collect at the counter.`;
       } else {
         document.getElementById("orderStatusTitle").textContent = "Order Received";
         document.getElementById("orderStatusMsg").classList.remove("hidden");
         document.getElementById("orderReadyBox").classList.add("hidden");
       }
       return;
+    } else {
+      // Order no longer exists → reset
+      clearCustomerSession();
     }
   }
-  if (state.customer.name) {
+  if (app.customer.name) {
     document.getElementById("welcomeScreen").classList.add("hidden");
     document.getElementById("shopScreen").classList.remove("hidden");
     document.getElementById("orderStatusScreen").classList.add("hidden");
-    document.getElementById("custDisplayName").textContent = state.customer.name;
+    document.getElementById("custDisplayName").textContent = app.customer.name;
     renderCategories();
     renderProducts();
     updateCartUI();
@@ -1715,141 +1235,146 @@ function renderCustomer() {
 
 document.getElementById("btnContinue").addEventListener("click", () => {
   const name = document.getElementById("custName").value.trim();
-  const wa = document.getElementById("custWhatsApp").value.trim();
+  const wa = document.getElementById("custWhatsApp").value.trim().replace(/\D/g, "");
   let ok = true;
-  if (!name) {
-    document.getElementById("custName").classList.add("error");
-    ok = false;
-  } else document.getElementById("custName").classList.remove("error");
-  if (!wa || wa.length < 10) {
-    document.getElementById("custWhatsApp").classList.add("error");
-    ok = false;
-  } else document.getElementById("custWhatsApp").classList.remove("error");
+  if (!name) { document.getElementById("custName").classList.add("error"); ok = false; }
+  else document.getElementById("custName").classList.remove("error");
+  if (!wa || wa.length < 10) { document.getElementById("custWhatsApp").classList.add("error"); ok = false; }
+  else document.getElementById("custWhatsApp").classList.remove("error");
   if (!ok) return;
-  state.customer = { name, whatsapp: wa };
-  state.cart = [];
-  state.currentOrderId = null;
-  saveState();
+  app.customer = { name, whatsapp: wa };
+  app.cart = [];
+  app.currentOrderId = null;
+  saveCustomerSession();
   renderCustomer();
-  toast("Welcome, " + name + "!", "success");
+  notificationService.toast("Welcome, " + name + "!", "success");
+});
+
+document.getElementById("btnNewOrder").addEventListener("click", () => {
+  clearCustomerSession();
+  renderCustomer();
+});
+
+document.getElementById("btnRefreshStatus").addEventListener("click", () => {
+  orderService.reload();
+  renderCustomer();
+  notificationService.toast("Status refreshed", "info");
 });
 
 function renderCategories() {
   const el = document.getElementById("categoryList");
   el.innerHTML = CATEGORIES.map(c =>
-    `<button class="cat-chip ${state.activeCategory === c ? "active" : ""}" data-cat="${c}">${c}</button>`
+    `<button class="cat-chip ${app.activeCategory === c ? "active" : ""}" data-cat="${c}">${c}</button>`
   ).join("");
   el.querySelectorAll(".cat-chip").forEach(btn => {
     btn.addEventListener("click", () => {
-      state.activeCategory = btn.dataset.cat;
+      app.activeCategory = btn.dataset.cat;
       renderCategories();
       renderProducts();
     });
   });
 }
 
+function productImgHtml(p) {
+  const fallback = getProductFallback(p.name);
+  const src = p.img || fallback;
+  return `<img src="${src}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'">`;
+}
+
 function renderProducts() {
   let list = PRODUCTS;
-  if (state.activeCategory !== "All") list = list.filter(p => p.cat === state.activeCategory);
-  if (state.searchQuery) {
-    const q = state.searchQuery.toLowerCase();
-    list = list.filter(p => p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q));
+  if (app.activeCategory !== "All") list = list.filter(p => p.cat === app.activeCategory);
+  if (app.searchQuery) {
+    const q = app.searchQuery.toLowerCase();
+    list = list.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.spec || "").toLowerCase().includes(q) ||
+      (p.desc || "").toLowerCase().includes(q) ||
+      p.cat.toLowerCase().includes(q)
+    );
   }
   const grid = document.getElementById("productsGrid");
-  if (list.length === 0) {
+  if (!list.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><p>No products found</p></div>`;
     return;
   }
   grid.innerHTML = list.map(p => {
-    const inCart = state.cart.find(c => c.id === p.id);
+    const inCart = app.cart.find(c => c.id === p.id);
     return `
       <div class="product-card">
-        <div class="product-img"><div class="placeholder">${p.icon}</div></div>
+        <div class="product-img">${productImgHtml(p)}</div>
         <div class="product-body">
           <div class="product-name">${p.name}</div>
-          <div class="product-desc">${p.desc}</div>
+          <div class="product-spec">${p.spec || ""}</div>
+          <div class="product-desc">${p.desc || ""} · ${p.unit}</div>
           <div class="product-meta">
-            <div>
-              <div class="product-price">${formatINR(p.price)} <small>est. / ${p.unit}</small></div>
-            </div>
+            <div class="product-unit">${p.unit}</div>
             ${inCart ? `
               <div class="qty-control">
-                <button onclick="changeQty(${p.id}, -1)">−</button>
+                <button type="button" onclick="changeQty(${p.id},-1)">−</button>
                 <span>${inCart.qty}</span>
-                <button onclick="changeQty(${p.id}, 1)">+</button>
+                <button type="button" onclick="changeQty(${p.id},1)">+</button>
               </div>
-            ` : `<button class="add-btn" onclick="addToCart(${p.id})">+</button>`}
+            ` : `<button type="button" class="add-btn" onclick="addToCart(${p.id})">+</button>`}
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join("");
 }
 
 document.getElementById("searchInput").addEventListener("input", e => {
-  state.searchQuery = e.target.value;
+  app.searchQuery = e.target.value;
   renderProducts();
 });
 
 function addToCart(id) {
   const p = PRODUCTS.find(x => x.id === id);
   if (!p) return;
-  const existing = state.cart.find(c => c.id === id);
+  const existing = app.cart.find(c => c.id === id);
   if (existing) existing.qty++;
-  else state.cart.push({ id: p.id, name: p.name, price: p.price, unit: p.unit, qty: 1 });
-  saveState();
+  else app.cart.push({ id: p.id, name: p.name, spec: p.spec, unit: p.unit, qty: 1, img: p.img });
   renderProducts();
   updateCartUI();
 }
 
 function changeQty(id, delta) {
-  const item = state.cart.find(c => c.id === id);
+  const item = app.cart.find(c => c.id === id);
   if (!item) return;
   item.qty += delta;
-  if (item.qty <= 0) state.cart = state.cart.filter(c => c.id !== id);
-  saveState();
+  if (item.qty <= 0) app.cart = app.cart.filter(c => c.id !== id);
   renderProducts();
   updateCartUI();
   renderCartSheet();
 }
 
 function updateCartUI() {
-  const count = state.cart.reduce((s, c) => s + c.qty, 0);
-  const total = state.cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const count = app.cart.reduce((s, c) => s + c.qty, 0);
   const sticky = document.getElementById("stickyCart");
   if (count > 0) {
     sticky.classList.add("visible");
     document.getElementById("cartCount").textContent = count + (count === 1 ? " item" : " items");
-    document.getElementById("cartSub").textContent = "Est. " + formatINR(total);
-  } else {
-    sticky.classList.remove("visible");
-  }
+  } else sticky.classList.remove("visible");
 }
 
 function renderCartSheet() {
   const el = document.getElementById("cartItems");
-  if (state.cart.length === 0) {
+  if (!app.cart.length) {
     el.innerHTML = `<div class="empty-state"><p>Cart is empty</p></div>`;
     return;
   }
-  el.innerHTML = state.cart.map(c => `
+  el.innerHTML = app.cart.map(c => `
     <div class="cart-item">
       <div class="cart-item-info">
         <div class="cart-item-name">${c.name}</div>
-        <div class="cart-item-meta">${formatINR(c.price)} × ${c.qty} ${c.unit}</div>
+        <div class="cart-item-meta">${c.spec || ""} · Qty ${c.qty} ${c.unit}</div>
       </div>
-      <div class="cart-item-actions">
-        <div class="qty-control">
-          <button onclick="changeQty(${c.id}, -1)">−</button>
-          <span>${c.qty}</span>
-          <button onclick="changeQty(${c.id}, 1)">+</button>
-        </div>
-        <button class="remove-btn" onclick="changeQty(${c.id}, -999)">Remove</button>
+      <div class="qty-control">
+        <button type="button" onclick="changeQty(${c.id},-1)">−</button>
+        <span>${c.qty}</span>
+        <button type="button" onclick="changeQty(${c.id},1)">+</button>
       </div>
-    </div>
-  `).join("");
-  const total = state.cart.reduce((s, c) => s + c.price * c.qty, 0);
-  document.getElementById("cartTotal").textContent = formatINR(total);
+    </div>`).join("");
+  document.getElementById("cartTotal").textContent = app.cart.reduce((s, c) => s + c.qty, 0) + " items";
 }
 
 document.getElementById("btnViewCart").addEventListener("click", () => {
@@ -1865,48 +1390,95 @@ function closeCart() {
 }
 
 document.getElementById("btnPlaceOrder").addEventListener("click", () => {
-  if (state.cart.length === 0) return;
-  const orderId = generateOrderId();
+  if (!app.cart.length) return;
+  const orderId = orderService.nextId();
   const order = {
     id: orderId,
-    customerName: state.customer.name,
-    whatsapp: state.customer.whatsapp,
-    items: JSON.parse(JSON.stringify(state.cart)),
+    customerName: app.customer.name,
+    whatsapp: app.customer.whatsapp,
+    items: JSON.parse(JSON.stringify(app.cart)),
     status: "WAITING",
-    assignedTo: null,
-    assignedName: null,
+    assignedStaffId: null,
+    assignedStaffName: null,
+    collectedByStaffId: null,
+    collectedByStaffName: null,
     collected: {},
     createdAt: new Date().toISOString(),
-    bill: null
+    bill: null,
+    completedAt: null
   };
-  state.orders.unshift(order);
-  state.currentOrderId = orderId;
-  state.cart = [];
-  saveState();
+  orderService.create(order);
+  app.currentOrderId = orderId;
+  app.cart = [];
+  saveCustomerSession();
   closeCart();
   renderCustomer();
-  toast("Order " + orderId + " placed successfully", "success");
-  if (state.view === "counter") renderCounter();
+  notificationService.toast("Order " + orderId + " placed", "success");
 });
 
-// QR visual
-(function buildQR() {
-  const grid = document.getElementById("qrGrid");
-  const pattern = [1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,0,1,1,1,0,1,1,0,1,0,1,0,1,1,0,1,1,1,0,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,1,0,1,0,0,1,1,0,0,1,1,0,0,1,0,1,0,1,0,1,0,0,0,1,1,0,0,1];
-  for (let i = 0; i < 49; i++) {
-    const cell = document.createElement("div");
-    cell.className = "qr-cell" + (pattern[i] ? "" : " off");
-    grid.appendChild(cell);
-  }
-})();
+// ========== LOGIN ==========
+function initStaffSelect() {
+  const sel = document.getElementById("loginStaffSelect");
+  if (!sel) return;
+  sel.innerHTML = STAFF_ACCOUNTS.map(s =>
+    `<option value="${s.id}">${s.name}</option>`
+  ).join("");
+}
 
-// ---------- COUNTER ----------
+document.querySelectorAll(".role-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".role-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    app.loginRole = tab.dataset.role;
+    document.getElementById("staffSelectGroup").style.display = app.loginRole === "staff" ? "block" : "none";
+    if (app.loginRole === "staff") initStaffSelect();
+  });
+});
+
+document.getElementById("btnLogin").addEventListener("click", () => {
+  const username = document.getElementById("loginUsername").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const staffId = app.loginRole === "staff" ? parseInt(document.getElementById("loginStaffSelect").value) : null;
+  const auth = authService.login(app.loginRole, username, password, staffId);
+  if (!auth) {
+    notificationService.toast("Invalid credentials", "warning");
+    return;
+  }
+  authService.setAuth(auth);
+  notificationService.initAudio();
+  if (auth.role === "staff") notificationService.requestPermission();
+  location.hash = auth.role;
+  showView(auth.role);
+  if (auth.role === "counter") renderCounter();
+  if (auth.role === "staff") {
+    app.lastKnownAssignments[auth.staffId] = orderService.getStaffById(auth.staffId)?.currentOrderId || null;
+    renderStaff();
+  }
+  if (auth.role === "admin") renderAdmin();
+});
+
+document.getElementById("linkCustomer").addEventListener("click", e => {
+  e.preventDefault();
+  location.hash = "customer";
+  routeFromHash();
+});
+
+["btnLogoutCounter", "btnLogoutStaff", "btnLogoutAdmin"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => {
+    authService.logout();
+    location.hash = "login";
+    showView("login");
+    initStaffSelect();
+  });
+});
+
+// ========== COUNTER ==========
 document.querySelectorAll("#counterNav button").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll("#counterNav button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    ["dashboard","orders","staff","billing"].forEach(p => {
-      document.getElementById("panel-" + p).classList.toggle("hidden", p !== btn.dataset.panel);
+    ["dashboard", "orders", "staff", "billing"].forEach(p => {
+      document.getElementById("cpanel-" + p).classList.toggle("hidden", p !== btn.dataset.panel);
     });
     if (btn.dataset.panel === "staff") renderStaffTable();
     if (btn.dataset.panel === "billing") renderBillingList();
@@ -1914,24 +1486,21 @@ document.querySelectorAll("#counterNav button").forEach(btn => {
 });
 
 function renderCounter() {
-  const newC = state.orders.filter(o => o.status === "WAITING").length;
-  const prep = state.orders.filter(o => o.status === "ASSIGNED" || o.status === "PREPARING").length;
-  const ready = state.orders.filter(o => o.status === "READY").length;
-  const done = state.orders.filter(o => o.status === "COMPLETED").length;
-  document.getElementById("statNew").textContent = newC;
-  document.getElementById("statPrep").textContent = prep;
-  document.getElementById("statReady").textContent = ready;
-  document.getElementById("statDone").textContent = done;
-
-  renderOrderCards(document.getElementById("liveOrders"), state.orders.filter(o => o.status !== "COMPLETED").slice(0, 12));
-  renderOrderCards(document.getElementById("allOrders"), state.orders);
+  orderService.reload();
+  const orders = orderService.getAll();
+  document.getElementById("statNew").textContent = orders.filter(o => o.status === "WAITING").length;
+  document.getElementById("statPrep").textContent = orders.filter(o => o.status === "ASSIGNED" || o.status === "PREPARING").length;
+  document.getElementById("statReady").textContent = orders.filter(o => o.status === "READY" || o.status === "BILLING").length;
+  document.getElementById("statDone").textContent = orders.filter(o => o.status === "COMPLETED").length;
+  renderOrderCards(document.getElementById("liveOrders"), orders.filter(o => o.status !== "COMPLETED").slice(0, 15));
+  renderOrderCards(document.getElementById("allOrders"), orders);
   renderStaffTable();
   renderBillingList();
 }
 
 function renderOrderCards(container, orders) {
-  if (!orders || orders.length === 0) {
-    container.innerHTML = `<div class="empty-state"><p>No orders yet</p></div>`;
+  if (!orders.length) {
+    container.innerHTML = `<div class="empty-state"><p>No orders</p></div>`;
     return;
   }
   container.innerHTML = orders.map(o => {
@@ -1942,64 +1511,59 @@ function renderOrderCards(container, orders) {
     } else if (o.status === "READY") {
       actions = `<button class="btn btn-primary btn-sm" onclick="openBillingModal('${o.id}')">Prepare Bill</button>`;
     } else if (o.status === "ASSIGNED" || o.status === "PREPARING") {
-      actions = `<span class="text-muted" style="font-size:12px;">Assigned to ${o.assignedName || "—"}</span>`;
+      actions = `<span style="font-size:12px;color:var(--text-muted);">Assigned to ${o.assignedStaffName || "—"}</span>`;
     } else if (o.status === "COMPLETED") {
-      actions = `<span class="text-muted" style="font-size:12px;">Completed</span>`;
+      actions = `<span style="font-size:12px;color:var(--text-muted);">Collected by ${o.collectedByStaffName || "—"}</span>`;
     }
-    const statusClass = o.status === "WAITING" ? "waiting" : o.status === "READY" ? "ready" : o.status === "COMPLETED" ? "completed" : "assigned";
-    const cardClass = o.status === "WAITING" ? "new" : o.status === "READY" ? "ready" : o.status === "COMPLETED" ? "completed" : "assigned";
+    const sc = o.status === "WAITING" ? "waiting" : o.status === "READY" || o.status === "BILLING" ? "ready" : o.status === "COMPLETED" ? "completed" : "assigned";
+    const cc = o.status === "WAITING" ? "new" : o.status === "READY" || o.status === "BILLING" ? "ready" : o.status === "COMPLETED" ? "completed" : "assigned";
     return `
-      <div class="order-card ${cardClass}">
+      <div class="order-card ${cc}">
         <div class="order-card-top">
-          <div class="order-id">ORDER #${o.id}</div>
-          <span class="status-badge ${statusClass}">${o.status === "WAITING" ? "Waiting for Staff" : o.status}</span>
+          <div class="order-id">#${o.id}</div>
+          <span class="status-badge ${sc}">${o.status}</span>
         </div>
         <div class="order-meta">
           <div>Customer: <strong>${o.customerName}</strong></div>
           <div>WhatsApp: <strong>+91 ${o.whatsapp}</strong></div>
           <div>Items: <strong>${itemCount}</strong></div>
-          ${o.assignedName ? `<div>Staff: <strong>${o.assignedName}</strong></div>` : ""}
+          ${o.assignedStaffName ? `<div>Staff: <strong>${o.assignedStaffName}</strong></div>` : ""}
         </div>
         <div class="order-actions">${actions}</div>
-      </div>
-    `;
+      </div>`;
   }).join("");
 }
 
 function renderStaffTable() {
   const tbody = document.getElementById("staffTableBody");
-  tbody.innerHTML = state.staff.map(s => `
+  tbody.innerHTML = orderService.getStaff().map(s => `
     <tr>
       <td style="font-weight:500;">${s.name}</td>
-      <td><span class="status-dot ${s.status.toLowerCase()}">${s.status}</span></td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:13px;">${s.orderId || "—"}</td>
-      <td>${s.status === "AVAILABLE" ? '<span class="text-muted" style="font-size:12px;">Ready</span>' : s.status === "BUSY" ? '<span class="text-muted" style="font-size:12px;">On task</span>' : "—"}</td>
-    </tr>
-  `).join("");
+      <td><span class="status-dot ${s.status.toLowerCase()}">${s.status === "AVAILABLE" ? "🟢 AVAILABLE" : s.status === "BUSY" ? "🔴 BUSY" : s.status}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:13px;">${s.currentOrderId || "—"}</td>
+      <td></td>
+    </tr>`).join("");
 }
 
 function renderBillingList() {
-  const ready = state.orders.filter(o => o.status === "READY");
-  renderOrderCards(document.getElementById("billingOrders"), ready);
+  renderOrderCards(document.getElementById("billingOrders"), orderService.getAll().filter(o => o.status === "READY"));
 }
 
-// Assign Modal
 let assignOrderId = null;
 function openAssignModal(orderId) {
   assignOrderId = orderId;
-  const order = state.orders.find(o => o.id === orderId);
+  const order = orderService.getById(orderId);
   if (!order) return;
-  document.getElementById("assignOrderInfo").innerHTML = `Order <strong>${order.id}</strong> · ${order.customerName} · ${order.items.reduce((s,i)=>s+i.qty,0)} items`;
-  const available = state.staff.filter(s => s.status === "AVAILABLE");
+  document.getElementById("assignOrderInfo").innerHTML = `Order <strong>${order.id}</strong> · ${order.customerName} · ${order.items.reduce((s, i) => s + i.qty, 0)} items`;
+  const available = orderService.getStaff().filter(s => s.status === "AVAILABLE");
   const list = document.getElementById("availableStaffList");
-  if (available.length === 0) {
-    list.innerHTML = `<p class="text-muted" style="text-align:center;padding:20px;">No staff available right now</p>`;
+  if (!available.length) {
+    list.innerHTML = `<p class="empty-state">No staff available</p>`;
   } else {
     list.innerHTML = available.map(s => `
       <button class="btn btn-secondary" style="width:100%;margin-bottom:8px;justify-content:flex-start;" onclick="assignStaff(${s.id})">
-        Assign to ${s.name}
-      </button>
-    `).join("");
+        🟢 Assign to ${s.name}
+      </button>`).join("");
   }
   document.getElementById("assignModal").classList.add("open");
 }
@@ -2008,67 +1572,68 @@ function closeAssignModal() {
   assignOrderId = null;
 }
 function assignStaff(staffId) {
-  const order = state.orders.find(o => o.id === assignOrderId);
-  const staff = state.staff.find(s => s.id === staffId);
-  if (!order || !staff || staff.status !== "AVAILABLE") return;
-  order.status = "ASSIGNED";
-  order.assignedTo = staff.id;
-  order.assignedName = staff.name;
-  order.collected = {};
-  staff.status = "BUSY";
-  staff.orderId = order.id;
-  saveState();
+  if (!orderService.assign(assignOrderId, staffId)) {
+    notificationService.toast("Could not assign", "warning");
+    return;
+  }
   closeAssignModal();
   renderCounter();
-  toast(`Order ${order.id} assigned to ${staff.name}`, "success");
-  if (state.view === "staff" && state.selectedStaffId === staffId) renderStaff();
+  const staff = orderService.getStaffById(staffId);
+  notificationService.toast(`Assigned to ${staff.name}`, "success");
 }
 
-// Billing Modal
 function openBillingModal(orderId) {
-  const order = state.orders.find(o => o.id === orderId);
+  const order = orderService.getById(orderId);
   if (!order) return;
-  state.currentBillOrder = order;
-  state.billData = order.items.map(item => ({
-    id: item.id,
-    name: item.name,
-    qty: item.qty,
-    unitPrice: item.price,
-    discount: 0
-  }));
+  order.status = "BILLING";
+  orderService.update(order);
+  app.currentBillOrder = order;
+  // Pre-fill with product basePrice (fully editable)
+  app.billData = order.items.map(item => {
+    const p = PRODUCTS.find(x => x.id === item.id);
+    const defaultPrice = (p && typeof p.basePrice === "number") ? p.basePrice : 50;
+    return {
+      id: item.id,
+      name: item.name + (item.spec ? " (" + item.spec + ")" : ""),
+      qty: item.qty,
+      unitPrice: defaultPrice,
+      discount: 0
+    };
+  });
   document.getElementById("billOrderId").textContent = order.id;
-  document.getElementById("billCustomerInfo").innerHTML = `Customer: <strong>${order.customerName}</strong> · WhatsApp: +91 ${order.whatsapp}`;
+  document.getElementById("billCustomerInfo").innerHTML = `Customer: <strong>${order.customerName}</strong> · +91 ${order.whatsapp}`;
+  document.getElementById("billStaffInfo").innerHTML = order.collectedByStaffName
+    ? `Collected by: <strong>${order.collectedByStaffName}</strong>`
+    : "";
   document.getElementById("gstPercent").value = 0;
   renderBillItems();
   document.getElementById("billingModal").classList.add("open");
 }
 function closeBillingModal() {
   document.getElementById("billingModal").classList.remove("open");
-  state.currentBillOrder = null;
+  app.currentBillOrder = null;
 }
 function renderBillItems() {
   const tbody = document.getElementById("billItemsBody");
-  tbody.innerHTML = state.billData.map((line, idx) => {
+  tbody.innerHTML = app.billData.map((line, idx) => {
     const amount = line.qty * line.unitPrice * (1 - line.discount / 100);
-    return `
-      <tr>
-        <td>${line.name}</td>
-        <td><input type="number" min="1" value="${line.qty}" onchange="updateBillLine(${idx},'qty',this.value)"></td>
-        <td><input type="number" min="0" step="0.5" value="${line.unitPrice}" onchange="updateBillLine(${idx},'unitPrice',this.value)"></td>
-        <td><input type="number" min="0" max="100" value="${line.discount}" onchange="updateBillLine(${idx},'discount',this.value)"></td>
-        <td style="font-weight:600;">${formatINR(amount)}</td>
-      </tr>
-    `;
+    return `<tr>
+      <td>${line.name}</td>
+      <td><input type="number" min="1" value="${line.qty}" onchange="updateBillLine(${idx},'qty',this.value)"></td>
+      <td><input type="number" min="0" step="0.5" value="${line.unitPrice}" onchange="updateBillLine(${idx},'unitPrice',this.value)"></td>
+      <td><input type="number" min="0" max="100" value="${line.discount}" onchange="updateBillLine(${idx},'discount',this.value)"></td>
+      <td style="font-weight:600;">${formatINR(amount)}</td>
+    </tr>`;
   }).join("");
   recalcBill();
 }
 function updateBillLine(idx, field, val) {
-  state.billData[idx][field] = parseFloat(val) || 0;
+  app.billData[idx][field] = parseFloat(val) || 0;
   renderBillItems();
 }
 function recalcBill() {
   let subtotal = 0, totalDisc = 0;
-  state.billData.forEach(l => {
+  app.billData.forEach(l => {
     const gross = l.qty * l.unitPrice;
     const disc = gross * (l.discount / 100);
     subtotal += gross;
@@ -2087,28 +1652,31 @@ function recalcBill() {
 
 document.getElementById("btnGenerateBill").addEventListener("click", () => {
   const totals = recalcBill();
-  const order = state.currentBillOrder;
+  if (totals.grand <= 0) {
+    notificationService.toast("Enter unit prices", "warning");
+    return;
+  }
+  const order = app.currentBillOrder;
   order.bill = {
-    lines: JSON.parse(JSON.stringify(state.billData)),
+    lines: JSON.parse(JSON.stringify(app.billData)),
     ...totals,
     invoiceNo: "INV-" + order.id.replace("MH-", ""),
     date: new Date().toLocaleString("en-IN")
   };
-  saveState();
+  orderService.update(order);
   closeBillingModal();
   showInvoice(order);
-  toast("Bill generated for " + order.id, "success");
+  notificationService.toast("Bill generated", "success");
 });
 
 function showInvoice(order) {
   const b = order.bill;
-  const inv = document.getElementById("invoiceContent");
-  inv.innerHTML = `
+  document.getElementById("invoiceContent").innerHTML = `
     <div class="invoice-header">
       <div class="invoice-brand">
-        <h2>MUNEER HARDWARE & ENTERPRISES</h2>
-        <p>Krishnapura, Surathkal, Mangaluru, Karnataka</p>
-        <p>Phone: 090355 99250</p>
+        <h2>${CONFIG.shopName}</h2>
+        <p>${CONFIG.shopAddress}</p>
+        <p>Phone: ${CONFIG.shopPhone}</p>
       </div>
       <div class="invoice-meta">
         <div><strong>Invoice #${b.invoiceNo}</strong></div>
@@ -2124,14 +1692,12 @@ function showInvoice(order) {
       </div>
       <div>
         <h4>From</h4>
-        <div style="font-weight:600;">Muneer Hardware & Enterprises</div>
-        <div>Krishnapura, Surathkal</div>
+        <div style="font-weight:600;">${CONFIG.shopName}</div>
+        <div>${CONFIG.shopAddress}</div>
       </div>
     </div>
     <table class="invoice-table">
-      <thead>
-        <tr><th>Item</th><th>Qty</th><th>Rate</th><th>Disc %</th><th>Amount</th></tr>
-      </thead>
+      <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Disc %</th><th>Amount</th></tr></thead>
       <tbody>
         ${b.lines.map(l => {
           const amt = l.qty * l.unitPrice * (1 - l.discount / 100);
@@ -2145,38 +1711,32 @@ function showInvoice(order) {
       ${b.gstPct > 0 ? `<div class="row"><span>GST (${b.gstPct}%)</span><span>${formatINR(b.gstAmt)}</span></div>` : ""}
       <div class="row grand"><span>Grand Total</span><span>${formatINR(b.grand)}</span></div>
     </div>
-    <div class="invoice-footer">
-      Thank you for shopping with Muneer Hardware & Enterprises.<br>
-      Prices confirmed at counter · This is a computer-generated invoice.
-    </div>
-  `;
-  document.getElementById("btnCompleteOrder").style.display = "none";
-  document.getElementById("btnSendWhatsApp").style.display = "inline-flex";
+    <div style="margin-top:16px;font-size:13px;"><strong>Collected By:</strong> ${order.collectedByStaffName || order.assignedStaffName || "—"}</div>
+    <div class="invoice-footer">Thank you for shopping with ${CONFIG.shopName}.</div>`;
+  app._currentInvoiceOrder = order;
   document.getElementById("invoiceModal").classList.add("open");
-  window._currentInvoiceOrder = order;
 }
-
 function closeInvoiceModal() {
   document.getElementById("invoiceModal").classList.remove("open");
 }
 
 document.getElementById("btnDownloadPdf").addEventListener("click", () => {
-  const order = window._currentInvoiceOrder;
+  const order = app._currentInvoiceOrder;
   if (!order || !order.bill) return;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const b = order.bill;
   doc.setFontSize(16);
   doc.setFont(undefined, "bold");
-  doc.text("MUNEER HARDWARE & ENTERPRISES", 14, 20);
+  doc.text(CONFIG.shopName, 14, 20);
   doc.setFontSize(10);
   doc.setFont(undefined, "normal");
-  doc.text("Krishnapura, Surathkal, Mangaluru, Karnataka", 14, 27);
-  doc.text("Phone: 090355 99250", 14, 33);
+  doc.text(CONFIG.shopAddress, 14, 27);
+  doc.text("Phone: " + CONFIG.shopPhone, 14, 33);
   doc.setFontSize(11);
-  doc.text(`Invoice #${b.invoiceNo}`, 140, 20);
+  doc.text("Invoice #" + b.invoiceNo, 140, 20);
   doc.setFontSize(9);
-  doc.text(`Order: ${order.id}`, 140, 27);
+  doc.text("Order: " + order.id, 140, 27);
   doc.text(b.date, 140, 33);
   doc.setDrawColor(15, 118, 110);
   doc.setLineWidth(0.8);
@@ -2186,7 +1746,9 @@ document.getElementById("btnDownloadPdf").addEventListener("click", () => {
   doc.text("Bill To", 14, 48);
   doc.setFont(undefined, "normal");
   doc.text(order.customerName, 14, 54);
-  doc.text(`WhatsApp: +91 ${order.whatsapp}`, 14, 60);
+  doc.text("WhatsApp: +91 " + order.whatsapp, 14, 60);
+  doc.setFont(undefined, "bold");
+  doc.text("Collected By: " + (order.collectedByStaffName || order.assignedStaffName || "—"), 14, 68);
   const tableData = b.lines.map(l => [
     l.name,
     String(l.qty),
@@ -2195,7 +1757,7 @@ document.getElementById("btnDownloadPdf").addEventListener("click", () => {
     formatINR(l.qty * l.unitPrice * (1 - l.discount / 100))
   ]);
   doc.autoTable({
-    startY: 68,
+    startY: 74,
     head: [["Item", "Qty", "Rate", "Disc %", "Amount"]],
     body: tableData,
     theme: "striped",
@@ -2203,162 +1765,284 @@ document.getElementById("btnDownloadPdf").addEventListener("click", () => {
     margin: { left: 14, right: 14 }
   });
   let y = doc.lastAutoTable.finalY + 12;
-  doc.text(`Subtotal: ${formatINR(b.subtotal)}`, 140, y);
+  doc.setFont(undefined, "normal");
+  doc.text("Subtotal: " + formatINR(b.subtotal), 140, y);
   y += 6;
-  doc.text(`Discount: − ${formatINR(b.totalDisc)}`, 140, y);
+  doc.text("Discount: − " + formatINR(b.totalDisc), 140, y);
   y += 6;
   if (b.gstPct > 0) {
-    doc.text(`GST (${b.gstPct}%): ${formatINR(b.gstAmt)}`, 140, y);
+    doc.text("GST (" + b.gstPct + "%): " + formatINR(b.gstAmt), 140, y);
     y += 6;
   }
   doc.setFont(undefined, "bold");
   doc.setFontSize(12);
-  doc.text(`Grand Total: ${formatINR(b.grand)}`, 140, y + 4);
+  doc.text("Grand Total: " + formatINR(b.grand), 140, y + 4);
   doc.setFontSize(9);
   doc.setFont(undefined, "normal");
-  doc.text("Thank you for shopping with Muneer Hardware & Enterprises.", 14, y + 20);
-  doc.save(`Invoice_${order.id}.pdf`);
-  toast("PDF downloaded", "success");
+  doc.text("Thank you for shopping with " + CONFIG.shopName + ".", 14, y + 20);
+  doc.save("Invoice_" + order.id + ".pdf");
+  notificationService.toast("PDF downloaded", "success");
 });
 
-document.getElementById("btnSendWhatsApp").addEventListener("click", () => {
-  const order = window._currentInvoiceOrder;
-  if (!order) return;
-  document.getElementById("waName").textContent = order.customerName;
-  document.getElementById("waNumber").textContent = "+91 " + order.whatsapp;
-  document.getElementById("waOrderId").textContent = order.id;
-  document.getElementById("waTotal").textContent = formatINR(order.bill.grand);
-  document.getElementById("waModal").classList.add("open");
-  document.getElementById("btnCompleteOrder").style.display = "inline-flex";
-  document.getElementById("btnSendWhatsApp").style.display = "none";
-  toast("Invoice sent via WhatsApp (simulated)", "success");
+document.getElementById("btnOpenWhatsApp").addEventListener("click", () => {
+  const order = app._currentInvoiceOrder;
+  if (!order || !order.bill) return;
+  const b = order.bill;
+  let msg = `*${CONFIG.shopName}*\nInvoice for Order ${order.id}\n`;
+  msg += `Customer: ${order.customerName}\n`;
+  msg += `Collected by: ${order.collectedByStaffName || "—"}\n\n`;
+  b.lines.forEach(l => {
+    const amt = l.qty * l.unitPrice * (1 - l.discount / 100);
+    msg += `• ${l.name} × ${l.qty} = ${formatINR(amt)}\n`;
+  });
+  msg += `\n*Grand Total: ${formatINR(b.grand)}*\n`;
+  msg += `\nThank you for shopping with us.`;
+  const phone = order.whatsapp.replace(/\D/g, "");
+  const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, "_blank");
+  notificationService.toast("WhatsApp opened — send message & attach PDF if needed", "info");
 });
-
-function closeWaModal() {
-  document.getElementById("waModal").classList.remove("open");
-}
 
 document.getElementById("btnCompleteOrder").addEventListener("click", () => {
-  const order = window._currentInvoiceOrder;
+  const order = app._currentInvoiceOrder;
   if (!order) return;
-  order.status = "COMPLETED";
-  const staff = state.staff.find(s => s.orderId === order.id);
-  if (staff) {
-    staff.status = "AVAILABLE";
-    staff.orderId = null;
-  }
-  saveState();
+  orderService.complete(order.id);
   closeInvoiceModal();
-  closeWaModal();
   renderCounter();
-  toast(`Order ${order.id} completed`, "success");
+  notificationService.toast("Order " + order.id + " completed", "success");
 });
 
-// ---------- STAFF ----------
+// ========== STAFF ==========
 function renderStaff() {
-  const sel = document.getElementById("staffSelect");
-  sel.innerHTML = state.staff.map(s =>
-    `<option value="${s.id}" ${s.id === state.selectedStaffId ? "selected" : ""}>${s.name}</option>`
-  ).join("");
-  const me = state.staff.find(s => s.id === state.selectedStaffId) || state.staff[0];
-  state.selectedStaffId = me.id;
+  orderService.reload();
+  const auth = authService.getCurrent();
+  if (!auth || auth.role !== "staff") return;
+  const me = orderService.getStaffById(auth.staffId);
+  if (!me) return;
+  document.getElementById("staffNameDisplay").textContent = me.name;
   const pill = document.getElementById("staffStatusPill");
   pill.textContent = me.status;
   pill.className = "staff-status-pill " + me.status.toLowerCase();
 
-  const order = state.orders.find(o => o.id === me.orderId && (o.status === "ASSIGNED" || o.status === "PREPARING"));
+  const order = me.currentOrderId ? orderService.getById(me.currentOrderId) : null;
+  const activeOrder = order && (order.status === "ASSIGNED" || order.status === "PREPARING") ? order : null;
+
   const empty = document.getElementById("staffEmpty");
   const container = document.getElementById("staffOrderContainer");
-  if (!order) {
+  if (!activeOrder) {
     empty.classList.remove("hidden");
     container.classList.add("hidden");
     return;
   }
   empty.classList.add("hidden");
   container.classList.remove("hidden");
-  if (!order.collected) order.collected = {};
-  const totalItems = order.items.length;
-  const checkedCount = order.items.filter(i => order.collected[i.id]).length;
-  const allDone = checkedCount === totalItems;
+  if (!activeOrder.collected) activeOrder.collected = {};
+  const total = activeOrder.items.length;
+  const checked = activeOrder.items.filter(i => activeOrder.collected[i.id]).length;
+  const allDone = checked === total;
 
   container.innerHTML = `
     <div class="staff-order-card">
       <div class="staff-order-header">
-        <div class="label">New Order Assigned</div>
-        <div class="id">${order.id}</div>
+        <div class="label">Order Assigned</div>
+        <div class="id">${activeOrder.id}</div>
       </div>
-      <div class="staff-order-customer">
-        Customer: <strong>${order.customerName}</strong> · +91 ${order.whatsapp}
+      <div class="staff-order-customer">Customer: <strong>${activeOrder.customerName}</strong> · +91 ${activeOrder.whatsapp}</div>
+      <div>
+        ${activeOrder.items.map(item => {
+          const p = PRODUCTS.find(x => x.id === item.id);
+          const fallback = getProductFallback(item.name);
+          const src = (p && p.img) ? p.img : fallback;
+          return `
+            <label class="staff-item ${activeOrder.collected[item.id] ? "checked" : ""}">
+              <input type="checkbox" ${activeOrder.collected[item.id] ? "checked" : ""} onchange="toggleCollect('${activeOrder.id}',${item.id},this.checked)">
+              <img class="staff-item-img" src="${src}" alt="" onerror="this.onerror=null;this.src='${fallback}'">
+              <div class="staff-item-info">
+                <div class="staff-item-name">${item.name}</div>
+                <div class="staff-item-qty">${item.spec || ""} · Qty: ${item.qty} ${item.unit}</div>
+              </div>
+            </label>`;
+        }).join("")}
       </div>
-      <div class="staff-items">
-        ${order.items.map(item => `
-          <label class="staff-item ${order.collected[item.id] ? "checked" : ""}">
-            <input type="checkbox" ${order.collected[item.id] ? "checked" : ""} onchange="toggleCollect('${order.id}', ${item.id}, this.checked)">
-            <div class="staff-item-info">
-              <div class="staff-item-name">${item.name}</div>
-              <div class="staff-item-qty">Qty: ${item.qty} ${item.unit}</div>
-            </div>
-          </label>
-        `).join("")}
-      </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${(checkedCount/totalItems)*100}%"></div></div>
-      <div class="staff-progress">
-        <span>${checkedCount} / ${totalItems} items collected</span>
-      </div>
-      <button class="btn btn-primary staff-submit" id="btnSubmitOrder" ${allDone ? "" : "disabled"} onclick="submitStaffOrder('${order.id}')">
-        Submit Order to Counter
-      </button>
-    </div>
-  `;
+      <div class="progress-bar"><div class="progress-fill" style="width:${(checked / total) * 100}%"></div></div>
+      <div class="staff-progress"><span>${checked} / ${total} collected</span></div>
+      <button class="btn btn-primary staff-submit" ${allDone ? "" : "disabled"} onclick="submitStaffOrder('${activeOrder.id}')">Submit Order to Counter</button>
+    </div>`;
 }
 
-document.getElementById("staffSelect").addEventListener("change", e => {
-  state.selectedStaffId = parseInt(e.target.value);
-  saveState();
-  renderStaff();
-});
-
 function toggleCollect(orderId, itemId, checked) {
-  const order = state.orders.find(o => o.id === orderId);
+  const order = orderService.getById(orderId);
   if (!order) return;
   if (!order.collected) order.collected = {};
   order.collected[itemId] = checked;
   if (order.status === "ASSIGNED") order.status = "PREPARING";
-  saveState();
+  orderService.update(order);
   renderStaff();
 }
 
 function submitStaffOrder(orderId) {
-  const order = state.orders.find(o => o.id === orderId);
-  const staff = state.staff.find(s => s.id === state.selectedStaffId);
-  if (!order || !staff) return;
-  const allChecked = order.items.every(i => order.collected[i.id]);
-  if (!allChecked) return;
-  order.status = "READY";
-  staff.status = "AVAILABLE";
-  staff.orderId = null;
-  saveState();
+  const auth = authService.getCurrent();
+  if (!auth || auth.role !== "staff") return;
+  const order = orderService.getById(orderId);
+  if (!order) return;
+  if (!order.items.every(i => order.collected && order.collected[i.id])) return;
+  orderService.staffSubmit(orderId, auth.staffId);
   renderStaff();
-  toast(`Order ${orderId} submitted to counter`, "success");
-  if (state.view === "counter") {
-    renderCounter();
-    toast(`Order ${orderId} submitted by ${staff.name}`, "info");
-    toast(`${staff.name} is now available`, "info");
+  notificationService.toast("Order submitted to counter", "success");
+}
+
+function checkStaffNotifications() {
+  const auth = authService.getCurrent();
+  if (!auth || auth.role !== "staff") return;
+  orderService.reload();
+  const me = orderService.getStaffById(auth.staffId);
+  if (!me) return;
+  const prev = app.lastKnownAssignments[auth.staffId];
+  const curr = me.currentOrderId;
+  if (curr && curr !== prev) {
+    app.lastKnownAssignments[auth.staffId] = curr;
+    const order = orderService.getById(curr);
+    if (order) {
+      notificationService.playBeep();
+      notificationService.showBrowser("New Order Assigned", `${order.id} · ${order.customerName}`);
+      const banner = document.getElementById("staffNotifBanner");
+      document.getElementById("staffNotifText").textContent = `${order.id} · ${order.customerName} · ${order.items.reduce((s, i) => s + i.qty, 0)} items`;
+      banner.classList.add("show");
+      document.getElementById("staffNotifViewBtn").onclick = () => {
+        banner.classList.remove("show");
+        renderStaff();
+      };
+      setTimeout(() => banner.classList.remove("show"), 8000);
+      renderStaff();
+    }
+  } else if (!curr) {
+    app.lastKnownAssignments[auth.staffId] = null;
   }
 }
 
-// ---------- INIT ----------
-loadState();
-renderCustomer();
-renderCounter();
-renderStaff();
+// ========== ADMIN ==========
+document.querySelectorAll("#adminNav button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#adminNav button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    ["dashboard", "orders", "staff", "analytics", "qr", "settings"].forEach(p => {
+      document.getElementById("apanel-" + p).classList.toggle("hidden", p !== btn.dataset.panel);
+    });
+    if (btn.dataset.panel === "qr") renderQR();
+    if (btn.dataset.panel === "analytics") renderAnalytics();
+    if (btn.dataset.panel === "staff") renderAdminStaff();
+    if (btn.dataset.panel === "orders") renderAdminOrders();
+  });
+});
 
-setInterval(() => {
-  if (state.view === "counter") {
-    const newC = state.orders.filter(o => o.status === "WAITING").length;
-    document.getElementById("statNew").textContent = newC;
+function renderAdmin() {
+  orderService.reload();
+  const st = analyticsService.getTodayStats();
+  document.getElementById("aStatSales").textContent = formatINR(st.sales);
+  document.getElementById("aStatOrders").textContent = st.orders;
+  document.getElementById("aStatItems").textContent = st.items;
+  document.getElementById("aStatDone").textContent = st.completed;
+  renderOrderCards(document.getElementById("adminRecentOrders"), orderService.getAll().slice(0, 10));
+}
+
+function renderAdminOrders() {
+  const q = (document.getElementById("adminOrderSearch").value || "").toLowerCase();
+  let orders = orderService.getAll();
+  if (q) {
+    orders = orders.filter(o =>
+      o.id.toLowerCase().includes(q) ||
+      o.customerName.toLowerCase().includes(q) ||
+      (o.whatsapp || "").includes(q) ||
+      (o.assignedStaffName || "").toLowerCase().includes(q) ||
+      (o.collectedByStaffName || "").toLowerCase().includes(q)
+    );
   }
-}, 3000);
+  renderOrderCards(document.getElementById("adminAllOrders"), orders);
+}
+document.getElementById("adminOrderSearch").addEventListener("input", renderAdminOrders);
+
+function renderAdminStaff() {
+  const perf = analyticsService.staffPerformance();
+  document.getElementById("adminStaffBody").innerHTML = perf.map(s => `
+    <tr>
+      <td style="font-weight:500;">${s.name}</td>
+      <td><span class="status-dot ${s.status.toLowerCase()}">${s.status === "AVAILABLE" ? "🟢 AVAILABLE" : "🔴 BUSY"}</span></td>
+      <td>${s.handled} handled · ${s.completed} completed</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:13px;">${s.currentOrderId || "—"}</td>
+    </tr>`).join("");
+}
+
+function renderAnalytics() {
+  const st = analyticsService.getTodayStats();
+  document.getElementById("analyticsExtra").innerHTML = `
+    <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value">${st.pending}</div></div>
+    <div class="stat-card ready"><div class="stat-label">Ready</div><div class="stat-value">${st.ready}</div></div>`;
+  const cats = analyticsService.categorySales();
+  const el = document.getElementById("categorySales");
+  const entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) el.innerHTML = `<p class="text-muted">No completed sales yet</p>`;
+  else el.innerHTML = entries.map(([c, n]) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span>${c}</span><strong>${n} items</strong></div>`).join("");
+}
+
+function renderQR() {
+  const url = getCustomerUrl();
+  document.getElementById("qrUrlText").textContent = url;
+  const container = document.getElementById("qrCodeContainer");
+  container.innerHTML = "";
+  const canvas = document.createElement("canvas");
+  container.appendChild(canvas);
+  QRCode.toCanvas(canvas, url, { width: 220, margin: 2, color: { dark: "#0f172a", light: "#ffffff" } }, err => {
+    if (err) container.innerHTML = "<p>QR generation failed</p>";
+  });
+}
+
+document.getElementById("btnPrintQr").addEventListener("click", () => {
+  const url = getCustomerUrl();
+  const w = window.open("", "_blank");
+  w.document.write(`<!DOCTYPE html><html><head><title>QR - ${CONFIG.shopName}</title>
+    <style>body{font-family:sans-serif;text-align:center;padding:40px;} h1{font-size:18px;} img{margin:20px;}</style></head><body>
+    <h1>${CONFIG.shopName}</h1><p>Scan to Order</p><div id="q"></div><p style="font-size:11px;margin-top:20px;">${url}</p>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"><\/script>
+    <script>QRCode.toDataURL("${url}",{width:280},(e,u)=>{document.getElementById("q").innerHTML='<img src="'+u+'">';setTimeout(()=>window.print(),500);});<\/script>
+    </body></html>`);
+  w.document.close();
+});
+
+document.getElementById("btnClearDemo").addEventListener("click", () => {
+  if (!confirm("Clear all orders and reset staff status?")) return;
+  const shop = storageService.getShop() || {};
+  shop.orders = [];
+  shop.staff = STAFF_ACCOUNTS.map(s => ({ id: s.id, name: s.name, status: "AVAILABLE", currentOrderId: null }));
+  shop.orderCounter = 1000;
+  storageService.saveShop(shop);
+  orderService.init();
+  notificationService.toast("Demo data cleared", "success");
+  renderAdmin();
+});
+
+// ========== POLLING ==========
+setInterval(() => {
+  orderService.reload();
+  if (app.view === "counter") {
+    const auth = authService.getCurrent();
+    if (auth && auth.role === "counter") renderCounter();
+  }
+  if (app.view === "staff") {
+    checkStaffNotifications();
+    const auth = authService.getCurrent();
+    if (auth && auth.role === "staff") renderStaff();
+  }
+  if (app.view === "customer" && app.currentOrderId) {
+    renderCustomer();
+  }
+}, CONFIG.pollIntervalMs);
+
+// ========== INIT ==========
+orderService.init();
+initStaffSelect();
+window.addEventListener("hashchange", routeFromHash);
+if (!location.hash) location.hash = "customer";
+routeFromHash();
 </script>
 </body>
 </html>
