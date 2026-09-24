@@ -1623,7 +1623,43 @@ function loadState() {
       const parsed = JSON.parse(saved);
       state = { ...state, ...parsed };
       // Ensure staff has correct structure
-      if (!state.staff || state.staff.length === 0) state.staff = JSON.parse(JSON.stringify "MH-" + state.orderCounter;
+      if (!state.staff || state.staff.length === 0) {
+        state.staff = JSON.parse(JSON.stringify(STAFF_DEFAULT));
+      }
+    }
+  } catch (e) {}
+}
+function saveState() {
+  try {
+    localStorage.setItem("mh_demo_state", JSON.stringify({
+      customer: state.customer,
+      cart: state.cart,
+      currentOrderId: state.currentOrderId,
+      orders: state.orders,
+      staff: state.staff,
+      selectedStaffId: state.selectedStaffId,
+      orderCounter: state.orderCounter
+    }));
+  } catch (e) {}
+}
+
+// ---------- UTILITIES ----------
+function toast(msg, type = "info") {
+  const c = document.getElementById("toastContainer");
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">×</button>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4500);
+}
+
+function formatINR(n) {
+  return "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+function generateOrderId() {
+  state.orderCounter++;
+  return "MH-" + state.orderCounter;
 }
 
 // ---------- VIEW SWITCHING ----------
@@ -1850,7 +1886,6 @@ document.getElementById("btnPlaceOrder").addEventListener("click", () => {
   closeCart();
   renderCustomer();
   toast("Order " + orderId + " placed successfully", "success");
-  // Notify counter if viewing
   if (state.view === "counter") renderCounter();
 });
 
@@ -1994,7 +2029,6 @@ function openBillingModal(orderId) {
   const order = state.orders.find(o => o.id === orderId);
   if (!order) return;
   state.currentBillOrder = order;
-  // Init bill line items with demo prices (editable)
   state.billData = order.items.map(item => ({
     id: item.id,
     name: item.name,
@@ -2119,8 +2153,6 @@ function showInvoice(order) {
   document.getElementById("btnCompleteOrder").style.display = "none";
   document.getElementById("btnSendWhatsApp").style.display = "inline-flex";
   document.getElementById("invoiceModal").classList.add("open");
-
-  // Store for PDF / WhatsApp
   window._currentInvoiceOrder = order;
 }
 
@@ -2210,7 +2242,6 @@ document.getElementById("btnCompleteOrder").addEventListener("click", () => {
   const order = window._currentInvoiceOrder;
   if (!order) return;
   order.status = "COMPLETED";
-  // Free staff if still assigned
   const staff = state.staff.find(s => s.orderId === order.id);
   if (staff) {
     staff.status = "AVAILABLE";
@@ -2221,10 +2252,6 @@ document.getElementById("btnCompleteOrder").addEventListener("click", () => {
   closeWaModal();
   renderCounter();
   toast(`Order ${order.id} completed`, "success");
-  // Update customer view if same session
-  if (state.currentOrderId === order.id) {
-    // Customer will see ready state on next render
-  }
 });
 
 // ---------- STAFF ----------
@@ -2313,7 +2340,6 @@ function submitStaffOrder(orderId) {
   saveState();
   renderStaff();
   toast(`Order ${orderId} submitted to counter`, "success");
-  // Counter notification
   if (state.view === "counter") {
     renderCounter();
     toast(`Order ${orderId} submitted by ${staff.name}`, "info");
@@ -2327,11 +2353,8 @@ renderCustomer();
 renderCounter();
 renderStaff();
 
-// Auto-refresh views when switching (already handled)
-// Periodic light sync for demo feel
 setInterval(() => {
   if (state.view === "counter") {
-    // Update stats silently
     const newC = state.orders.filter(o => o.status === "WAITING").length;
     document.getElementById("statNew").textContent = newC;
   }
